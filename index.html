@@ -206,24 +206,24 @@
   .loading-spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--coral);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto;}
   @keyframes pop{to{opacity:1;transform:none}}
 </style>
-  <!-- Google Maps JavaScript API — powers DistanceMatrixService for real drive times -->
+  <!-- Google Maps JavaScript API key is fetched securely at runtime -->
   <script>
-    // ============================================================
-    //  CONFIGURATION
-    //  Paste your Google Maps JavaScript API key on the line below
-    // ============================================================
-    const MAPS_API_KEY = 'AIzaSyBObksWDkGwLaM8Y3q9MXbMP0KDZFQUIBU';
-    // Dynamically load the Maps JS library so we can use DistanceMatrixService
-    (function(){
-      const s=document.createElement('script');
-      s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_API_KEY+'&callback=_mapsReady&libraries=geometry&v=weekly';
-      s.async=true; s.defer=true;
-      s.onerror=function(){ _mapsReadyResolve(); }; // resolve on failure so build() never hangs
-      document.head.appendChild(s);
-    })();
     let _mapsReadyResolve;
     const mapsReadyPromise=new Promise(r=>_mapsReadyResolve=r);
     function _mapsReady(){ _mapsReadyResolve(); }
+
+    // Fetch the Maps key from a secure Netlify function, then load Maps JS
+    fetch('/.netlify/functions/getmapskey')
+      .then(r=>r.json())
+      .then(d=>{
+        if(!d.key) return _mapsReadyResolve(); // no key — fall back gracefully
+        const s=document.createElement('script');
+        s.src='https://maps.googleapis.com/maps/api/js?key='+d.key+'&callback=_mapsReady&libraries=geometry&v=weekly';
+        s.async=true; s.defer=true;
+        s.onerror=function(){ _mapsReadyResolve(); };
+        document.head.appendChild(s);
+      })
+      .catch(()=>{ _mapsReadyResolve(); }); // fail gracefully, app still works
   </script>
 </head>
 <body>
@@ -621,7 +621,7 @@ async function build(){
   const orderedStops=tl0.items.filter(it=>it.type==='stop').map(it=>({la:it.p.la,lo:it.p.lo,n:it.p.n}));
 
   try{
-    if(orderedStops.length>1 && MAPS_API_KEY!=='AIzaSyBObksWDkGwLaM8Y3q9MXbMP0KDZFQUIBU'){
+    if(orderedStops.length>1){
       // Race the Maps JS ready-promise against a 6-second timeout.
       // If Maps JS fails to load (wrong key, billing issue, referrer mismatch),
       // the timeout wins and we fall through to haversine estimates gracefully.
