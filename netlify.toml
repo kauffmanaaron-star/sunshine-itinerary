@@ -4,6 +4,9 @@
 [functions]
   directory = "netlify/functions"
 
+[context.production]
+  SECRETS_SCAN_OMIT_KEYS = "GOOGLE_API_KEY"
+
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
