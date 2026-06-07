@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunshine Itinerary — Tampa Day Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ocean:#0c4a45;
+    --ocean-deep:#072e2b;
+    --coral:#ff6b4a;
+    --coral-soft:#ff9476;
+    --gold:#e6a64c;
+    --sand:#fbf3e6;
+    --sand-deep:#f3e6d0;
+    --ink:#1d2b2a;
+    --muted:#5e716e;
+    --line:#d9cab0;
+    --white:#fffdf8;
+    --shadow:0 18px 50px -20px rgba(7,46,43,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;
+    color:var(--ink);
+    background:var(--sand);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(255,148,118,.18), transparent 40%),
+      radial-gradient(circle at 88% 0%, rgba(230,166,76,.18), transparent 38%),
+      radial-gradient(circle at 50% 120%, rgba(12,74,69,.12), transparent 55%);
+    min-height:100vh;
+    line-height:1.5;
+  }
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.04;z-index:1;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px 80px;position:relative;z-index:2}
+
+  /* Header */
+  header{padding:40px 0 26px;text-align:center;animation:rise .8s ease both}
+  .sunsvg{display:block;margin:0 auto 18px;width:160px;height:auto;filter:drop-shadow(0 8px 28px rgba(232,67,62,.38)) drop-shadow(0 2px 8px rgba(249,201,78,.3))}
+  .kicker{font-size:.78rem;letter-spacing:.28em;text-transform:uppercase;color:var(--coral);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2.6rem,6vw,4.6rem);
+     line-height:.95;letter-spacing:-.02em;margin:.18em 0 .25em;color:var(--ocean-deep)}
+  h1 em{font-style:italic;color:var(--coral)}
+  .sub{max-width:560px;margin:0 auto;color:var(--muted);font-size:1.05rem}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:30px;margin-top:30px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+  /* Form panel */
+  .panel{background:var(--white);border:1px solid var(--line);border-radius:22px;
+     padding:28px;box-shadow:var(--shadow);position:sticky;top:22px;animation:rise .8s .1s ease both}
+  @media(max-width:880px){.panel{position:static}}
+  .panel h2{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:4px;color:var(--ocean-deep)}
+  .panel .note{font-size:.85rem;color:var(--muted);margin-bottom:22px}
+
+  .field{margin-bottom:20px}
+  .field label{display:block;font-weight:700;font-size:.82rem;letter-spacing:.04em;
+     text-transform:uppercase;margin-bottom:9px;color:var(--ocean)}
+
+  .budget-row{display:flex;align-items:baseline;gap:6px}
+  .dollar{font-family:'Fraunces',serif;font-size:2rem;font-weight:600;color:var(--coral)}
+  #budget{font-family:'Fraunces',serif;font-size:2.4rem;font-weight:600;border:none;
+     background:transparent;width:140px;color:var(--ocean-deep);outline:none;border-bottom:2px dashed var(--line)}
+  #budget:focus{border-color:var(--coral)}
+  .perperson{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+  input[type=range]{width:100%;accent-color:var(--coral);height:6px;cursor:pointer}
+  .rangeval{font-family:'Fraunces',serif;font-size:1.15rem;color:var(--ocean-deep);font-weight:600}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1.5px solid var(--line);background:var(--sand);border-radius:30px;
+     padding:8px 15px;font-size:.86rem;font-weight:600;cursor:pointer;transition:.16s;color:var(--muted)}
+  .chip:hover{border-color:var(--coral-soft)}
+  .chip.on{background:var(--ocean);border-color:var(--ocean);color:#fff}
+
+  .toggle{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+  .switch{width:46px;height:26px;border-radius:30px;background:var(--line);position:relative;transition:.2s;flex:none}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+  .toggle.on .switch{background:var(--coral)}
+  .toggle.on .switch::after{left:23px}
+  .toggle span{font-weight:600;font-size:.95rem}
+
+  .go{width:100%;margin-top:6px;border:none;background:var(--coral);color:#fff;font-family:'Fraunces',serif;
+     font-size:1.15rem;font-weight:600;padding:15px;border-radius:14px;cursor:pointer;transition:.18s;
+     box-shadow:0 12px 26px -10px var(--coral)}
+  .go:hover{background:#ff5733;transform:translateY(-2px)}
+  .go:active{transform:translateY(0)}
+
+  /* Results */
+  .results{min-height:300px;animation:rise .8s .2s ease both}
+  .empty{border:2px dashed var(--line);border-radius:22px;padding:60px 30px;text-align:center;color:var(--muted)}
+  .empty .big{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--ocean-deep);margin-bottom:8px}
+
+  .summary{background:var(--ocean);color:var(--sand);border-radius:22px;padding:24px 26px;margin-bottom:22px;
+     display:flex;flex-wrap:wrap;gap:22px;align-items:center;box-shadow:var(--shadow)}
+  .summary .blk{display:flex;flex-direction:column}
+  .summary .blk b{font-family:'Fraunces',serif;font-size:1.7rem;line-height:1;color:#fff}
+  .summary .blk small{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-top:5px}
+  .summary .wx{margin-left:auto;text-align:right}
+  .summary .wx .t{font-family:'Fraunces',serif;font-size:2rem;color:#fff}
+
+  .timeline{position:relative;padding-left:20px}
+  .timeline::before{content:"";position:absolute;left:6px;top:14px;bottom:14px;width:2px;
+     background:linear-gradient(var(--coral),var(--gold))}
+
+  .stop{position:relative;margin-bottom:14px;opacity:0;transform:translateY(14px);animation:pop .5s forwards}
+  .stop::before{content:"";position:absolute;left:-18px;top:24px;width:12px;height:12px;border-radius:50%;
+     background:var(--coral);border:3px solid var(--sand);box-shadow:0 0 0 2px var(--coral)}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+     box-shadow:0 8px 22px -16px rgba(7,46,43,.4);transition:.16s}
+  .card:hover{transform:translateX(3px);border-color:var(--coral-soft)}
+  .card .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+  .time{font-family:'Fraunces',serif;font-weight:600;color:var(--coral);font-size:.95rem;white-space:nowrap}
+  .card h3{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:600;color:var(--ocean-deep);margin:2px 0 4px}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+     padding:3px 9px;border-radius:20px;margin:0 5px 5px 0}
+  .t-free{background:#e2f3e8;color:#1f7a43}
+  .t-paid{background:#fdeede;color:#c2611b}
+  .t-meal{background:#eae6f7;color:#5b46a8}
+  .t-vibe{background:#e3eef0;color:var(--ocean)}
+  .card .desc{color:var(--muted);font-size:.92rem;margin-top:6px}
+  .card .cost{font-family:'Fraunces',serif;font-size:1.2rem;color:var(--ocean-deep);font-weight:600;white-space:nowrap}
+  .travel{font-size:.82rem;color:var(--muted);padding:8px 0 8px 4px;display:flex;align-items:center;gap:7px}
+  .travel::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+
+  .disclaimer{margin-top:26px;font-size:.8rem;color:var(--muted);background:var(--sand-deep);
+     border-radius:14px;padding:16px 18px;border:1px solid var(--line)}
+  .disclaimer b{color:var(--ocean)}
+
+  .retry{margin-bottom:18px;border:1.5px solid var(--ocean);background:transparent;color:var(--ocean);
+     font-family:'Hanken Grotesk',sans-serif;font-weight:700;font-size:.9rem;padding:10px 18px;border-radius:30px;cursor:pointer;transition:.16s}
+  .retry:hover{background:var(--ocean);color:#fff}
+  .maplink{font-size:.82rem;font-weight:700;color:var(--coral);text-decoration:none}
+  .maplink:hover{text-decoration:underline}
+
+  .t-region{background:var(--ocean);color:var(--sand)}
+  .cardbody{flex:1}
+  .pricenote{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:8px}
+  .cardactions{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+  .swap{border:1.5px solid var(--coral-soft);background:transparent;color:var(--coral);
+     font-family:'Hanken Grotesk',sans-serif;font-weight:700;font-size:.78rem;padding:6px 13px;border-radius:30px;cursor:pointer;transition:.16s}
+  .swap:hover:not(:disabled){background:var(--coral);color:#fff;border-color:var(--coral)}
+  .swap:disabled{opacity:.55;cursor:default}
+
+  .hint{font-weight:500;font-size:.72rem;text-transform:none;letter-spacing:0;color:var(--muted)}
+  .time-row{display:flex;align-items:center;gap:10px}
+  .time-field{display:flex;flex-direction:column;gap:5px;flex:1}
+  .time-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ocean)}
+  .timepick{border:1.5px solid var(--line);background:var(--sand);color:var(--ocean-deep);
+     font-family:'Hanken Grotesk',sans-serif;font-weight:600;font-size:.95rem;padding:9px 10px;
+     border-radius:10px;cursor:pointer;width:100%;outline:none;appearance:none;
+     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230c4a45' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+     background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+  .timepick:focus{border-color:var(--coral)}
+  .time-sep{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--muted);flex:none;padding-top:18px}
+  .overnote{background:#fbeede;border:1px solid var(--gold);color:#8a5414;border-radius:13px;
+     padding:11px 15px;font-size:.86rem;margin-bottom:16px}
+  .overnote b{color:#8a5414}
+  .timeedit{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .dur{font-size:.82rem;font-weight:700;color:var(--ocean);background:var(--sand);
+     border:1px solid var(--line);border-radius:30px;padding:5px 12px;white-space:nowrap}
+  .step{border:1.5px solid var(--line);background:#fff;color:var(--ocean);font-weight:700;
+     font-size:.78rem;padding:5px 11px;border-radius:30px;cursor:pointer;transition:.16s;font-family:'Hanken Grotesk',sans-serif}
+  .step:hover:not(:disabled){background:var(--ocean);color:#fff;border-color:var(--ocean)}
+  .step:disabled{opacity:.4;cursor:default}
+  .durhint{font-size:.74rem;color:var(--muted);font-style:italic}
+  @media(max-width:520px){.durhint{display:none}}
+
+  /* nautical chart map */
+  .mapwrap{margin:0 0 22px;border:1px solid var(--line);border-radius:20px;overflow:hidden;
+     box-shadow:var(--shadow);animation:rise .6s ease both}
+  .baymap{display:block;width:100%;height:auto;background:#8ec7c2}
+  .land{fill:#f1e4c9;stroke:#cBb892;stroke-width:1.2;stroke-linejoin:round}
+  .mgrid{stroke:#7cbdb7;stroke-width:1;opacity:.35}
+  .rlabel{font-family:'Hanken Grotesk',sans-serif;font-weight:700;pointer-events:none}
+  .rlabel.sea{fill:#4f8e89;font-size:10px;font-style:italic;font-weight:600;letter-spacing:.04em;text-anchor:middle;opacity:.8}
+  .rlabel.land{fill:#a48a52;font-size:9px;letter-spacing:.12em;text-anchor:middle;opacity:.85}
+  .routeline{fill:none;stroke:var(--coral);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 9;opacity:.95}
+  .pinshadow{fill:rgba(7,46,43,.22)}
+  .pinbody{fill:var(--ocean)}
+  .pindisc{fill:var(--sand);stroke:var(--ocean);stroke-width:2}
+  .picon{text-anchor:middle;dominant-baseline:central;font-size:12px}
+  .pinnum{fill:var(--coral);stroke:#fff;stroke-width:1.5}
+  .pinnumtext{text-anchor:middle;dominant-baseline:central;font-size:8.5px;font-weight:800;fill:#fff;font-family:'Hanken Grotesk',sans-serif}
+  .pinlabel rect{fill:rgba(251,243,230,.92);stroke:var(--line);stroke-width:.5}
+  .pinlabel text{text-anchor:middle;font-size:9px;font-weight:700;fill:var(--ocean-deep);font-family:'Hanken Grotesk',sans-serif}
+  .mappin{opacity:0;animation:pinpop .45s ease forwards}
+  @keyframes pinpop{from{opacity:0}to{opacity:1}}
+  .compass .crose{fill:rgba(251,243,230,.85);stroke:var(--ocean);stroke-width:1.5}
+  .compass .cax{stroke:var(--ocean);stroke-width:.75;opacity:.5}
+  .compass .cneedle{fill:var(--coral)}
+  .compass .cn{text-anchor:middle;font-size:10px;font-weight:800;fill:var(--ocean-deep);font-family:'Hanken Grotesk',sans-serif}
+  .mapcap{font-family:'Fraunces',serif;font-size:13px;fill:var(--ocean-deep);opacity:.72;font-style:italic}
+
+  .cardhead{display:flex;align-items:center;gap:9px}
+  .cardnum{width:25px;height:25px;border-radius:50%;background:var(--coral);color:#fff;
+     font-family:'Fraunces',serif;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center;flex:none}
+
+  @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--coral);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto;}
+  @keyframes pop{to{opacity:1;transform:none}}
+</style>
+  <!-- Google Maps JavaScript API — powers DistanceMatrixService for real drive times -->
+  <script>
+    // ============================================================
+    //  CONFIGURATION
+    //  Paste your Google Maps JavaScript API key on the line below
+    // ============================================================
+    const MAPS_API_KEY = 'AIzaSyBObksWDkGwLaM8Y3q9MXbMP0KDZFQUIBU';
+    // Dynamically load the Maps JS library so we can use DistanceMatrixService
+    (function(){
+      const s=document.createElement('script');
+      s.src='https://maps.googleapis.com/maps/api/js?key='+MAPS_API_KEY+'&callback=_mapsReady&libraries=geometry&v=weekly';
+      s.async=true; s.defer=true;
+      s.onerror=function(){ _mapsReadyResolve(); }; // resolve on failure so build() never hangs
+      document.head.appendChild(s);
+    })();
+    let _mapsReadyResolve;
+    const mapsReadyPromise=new Promise(r=>_mapsReadyResolve=r);
+    function _mapsReady(){ _mapsReadyResolve(); }
+  </script>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+  <header>
+    <svg class="sunsvg" viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <radialGradient id="sg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#f9c94e"/>
+          <stop offset="38%"  stop-color="#f4813a"/>
+          <stop offset="72%"  stop-color="#e8433e"/>
+          <stop offset="100%" stop-color="#c0284e"/>
+        </radialGradient>
+        <clipPath id="top"><rect x="0" y="0" width="200" height="100"/></clipPath>
+        <clipPath id="bot"><rect x="0" y="100" width="200" height="110"/></clipPath>
+      </defs>
+      <!-- top half of sun — solid gradient disc -->
+      <circle cx="100" cy="100" r="62" fill="url(#sg)" clip-path="url(#top)"/>
+      <!-- bottom half — same disc but striped via clipped lines -->
+      <circle cx="100" cy="100" r="62" fill="url(#sg)" clip-path="url(#bot)" opacity=".92"/>
+      <!-- retro horizontal stripes over the bottom half, clipped to circle -->
+      <g clip-path="url(#bot)" fill="none">
+        <line x1="38" y1="106" x2="162" y2="106" stroke="#fbf3e6" stroke-width="3.2" opacity=".82"/>
+        <line x1="42" y1="113" x2="158" y2="113" stroke="#fbf3e6" stroke-width="2.8" opacity=".74"/>
+        <line x1="48" y1="119" x2="152" y2="119" stroke="#fbf3e6" stroke-width="2.4" opacity=".65"/>
+        <line x1="54" y1="124" x2="146" y2="124" stroke="#fbf3e6" stroke-width="2.0" opacity=".56"/>
+        <line x1="60" y1="129" x2="140" y2="129" stroke="#fbf3e6" stroke-width="1.7" opacity=".46"/>
+        <line x1="68" y1="133" x2="132" y2="133" stroke="#fbf3e6" stroke-width="1.4" opacity=".36"/>
+        <line x1="76" y1="137" x2="124" y2="137" stroke="#fbf3e6" stroke-width="1.2" opacity=".26"/>
+        <line x1="84" y1="140" x2="116" y2="140" stroke="#fbf3e6" stroke-width="1.0" opacity=".18"/>
+      </g>
+      <!-- thin horizon line -->
+      <line x1="32" y1="100" x2="168" y2="100" stroke="#fbf3e6" stroke-width="1" opacity=".55"/>
+    </svg>
+    <div class="kicker">Tampa Bay &middot; Florida</div>
+    <h1>Sunshine<br><em>Itinerary</em></h1>
+    <p class="sub">Tell us your budget and the kind of day you're after. We'll build a route through the bay that fits — meals, travel time and all.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ============ FORM ============ -->
+    <div class="panel">
+      <h2>Plan your day</h2>
+      <p class="note">Adjust the dials, then build your itinerary.</p>
+
+      <div class="field">
+        <label>Total budget</label>
+        <div class="budget-row"><span class="dollar">$</span><input id="budget" type="number" value="40" min="0" step="5"></div>
+        <div class="perperson">Total for the whole group, whole day.</div>
+      </div>
+
+      <div class="field">
+        <label>How many people? <span class="rangeval" id="pplVal">1 person</span></label>
+        <input id="people" type="range" min="1" max="6" value="1" step="1">
+      </div>
+
+      <div class="field">
+        <label>When?</label>
+        <div class="time-row">
+          <div class="time-field"><span class="time-label">Start</span><select id="startTime" class="timepick"></select></div>
+          <span class="time-sep">&#8594;</span>
+          <div class="time-field"><span class="time-label">End</span><select id="endTime" class="timepick"></select></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Setting</label>
+        <div class="chips" id="setting">
+          <div class="chip on" data-v="either">Either</div>
+          <div class="chip" data-v="indoor">Indoor / AC</div>
+          <div class="chip" data-v="outdoor">Outdoor</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Atmosphere</label>
+        <div class="chips" id="vibe">
+          <div class="chip on" data-v="either">Either</div>
+          <div class="chip" data-v="quiet">Quiet</div>
+          <div class="chip" data-v="busy">Lively</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Area <span class="hint">pick one or more</span></label>
+        <div class="chips" id="region">
+          <div class="chip on" data-r="any">Anywhere</div>
+          <div class="chip" data-r="Tampa">Tampa</div>
+          <div class="chip" data-r="St. Petersburg">St. Pete</div>
+          <div class="chip" data-r="Clearwater">Clearwater</div>
+          <div class="chip" data-r="Dunedin">Dunedin</div>
+          <div class="chip" data-r="Tarpon Springs">Tarpon Springs</div>
+          <div class="chip" data-r="Safety Harbor">Safety Harbor</div>
+          <div class="chip" data-r="Treasure Island">Treasure Island</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Extras</label>
+<div class="toggle on" id="mealTog"><div class="switch"></div><span>Suggest meals</span></div>
+      </div>
+
+      <button class="go" onclick="build()">Build my itinerary &rarr;</button>
+    </div>
+
+    <!-- ============ RESULTS ============ -->
+    <div class="results" id="results">
+      <div class="empty">
+        <div class="big">Your day awaits</div>
+        Set your preferences and hit build — your custom Tampa itinerary will appear here.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------------
+   DATA — real Tampa Bay-area places (Google Places).
+   cost & duration are realistic ESTIMATES for the demo; a live
+   build would pull these from a places/ticketing API.
+   r = region/city for context & map links.
+----------------------------------------------------------------*/
+const PLACES = [
+  // n:name, r:region, la/lo:coords, c:cost/person, m:mins, in:indoor, v:vibe, b:near-water, d:desc
+  {n:"Curtis Hixon Waterfront Park",r:"Tampa",la:27.9489,lo:-82.4616,c:0,m:50,in:false,v:"busy",b:true,d:"Riverside lawn downtown with skyline views, fountains and frequent pop-up events."},
+  {n:"Julian B. Lane Riverfront Park",r:"Tampa",la:27.9539,lo:-82.4665,c:0,m:50,in:false,v:"quiet",b:true,d:"Calm, modern riverfront park with trails, courts and a peaceful boardwalk."},
+  {n:"Tampa Riverwalk",r:"Tampa",la:27.9447,lo:-82.4588,c:0,m:60,in:false,v:"busy",b:true,d:"2.6-mile waterfront promenade linking parks, cafes and museums."},
+  {n:"Water Works Park",r:"Tampa",la:27.9591,lo:-82.4628,c:0,m:40,in:false,v:"quiet",b:true,d:"Shady riverside green by Armature Works with a splash pad and dog park."},
+  {n:"Cotanchobee Fort Brooke Park",r:"Tampa",la:27.9416,lo:-82.4522,c:0,m:40,in:false,v:"quiet",b:true,d:"Small, scenic channel-side park with public art and quiet benches."},
+  {n:"The Florida Aquarium",r:"Tampa",la:27.9440,lo:-82.4449,c:35,m:150,in:true,v:"busy",b:true,d:"Large waterfront aquarium with touch tanks and a sea-life conservation focus."},
+  {n:"Tampa Bay History Center",r:"Tampa",la:27.9424,lo:-82.4499,c:16,m:120,in:true,v:"quiet",b:true,d:"Smithsonian-affiliated museum on Florida's people, pirates and cigar history."},
+  {n:"Tampa Museum of Art",r:"Tampa",la:27.9495,lo:-82.4630,c:20,m:90,in:true,v:"quiet",b:true,d:"Riverfront museum mixing classic and contemporary work in a calm, open space."},
+  {n:"Henry B. Plant Museum",r:"Tampa",la:27.9464,lo:-82.4640,c:10,m:60,in:true,v:"quiet",b:false,d:"Gilded-Age hotel turned museum inside the iconic silver-minaret landmark."},
+  {n:"Glazer Children's Museum",r:"Tampa",la:27.9496,lo:-82.4615,c:18,m:120,in:true,v:"busy",b:false,d:"Hands-on play museum downtown — ideal for younger kids."},
+  {n:"Museum of Science & Innovation (MOSI)",r:"Tampa",la:28.0533,lo:-82.4055,c:25,m:150,in:true,v:"busy",b:false,d:"Big STEM museum with a planetarium, ropes course and interactive exhibits."},
+  {n:"Davis Islands Beach",r:"Tampa",la:27.9126,lo:-82.4462,c:0,m:90,in:false,v:"quiet",b:true,d:"Quaint local bay beach minutes from downtown with skyline views."},
+  {n:"John F. Germany Public Library",r:"Tampa",la:27.9511,lo:-82.4619,c:0,m:60,in:true,v:"quiet",b:false,d:"Quiet downtown library — reading rooms, free Wi-Fi and cool AC at no cost."},
+  {n:"Oxford Exchange",r:"Tampa",la:27.9449,lo:-82.4646,c:0,m:45,in:true,v:"quiet",b:false,d:"Elegant bookstore-cafe with a hushed, library-like feel; browsing is free."},
+  {n:"Sparkman Wharf",r:"Tampa",la:27.9433,lo:-82.4477,c:0,m:60,in:false,v:"busy",b:true,d:"Waterfront plaza with food stalls, bars, lawn games and cruise-ship views."},
+  {n:"Ybor City Historic District",r:"Tampa",la:27.9620,lo:-82.4387,c:0,m:75,in:false,v:"busy",b:false,d:"Historic Latin quarter — cobblestone streets, cigar shops, the free TECO streetcar."},
+  {n:"The Dalí Museum",r:"St. Petersburg",la:27.7659,lo:-82.6316,c:32,m:120,in:true,v:"busy",b:true,d:"Stunning waterfront museum of Salvador Dalí's surreal masterworks."},
+  {n:"St. Pete Pier",r:"St. Petersburg",la:27.7737,lo:-82.6226,c:0,m:90,in:false,v:"busy",b:true,d:"Mile-long waterfront pier — marketplace, splash pad, dining and wide bay views."},
+  {n:"Sunken Gardens",r:"St. Petersburg",la:27.7898,lo:-82.6378,c:15,m:75,in:false,v:"quiet",b:false,d:"Lush century-old botanical garden with flamingos and shaded paths."},
+  {n:"Clearwater Marine Aquarium",r:"Clearwater",la:27.9769,lo:-82.8177,c:40,m:120,in:true,v:"busy",b:true,d:"Conservation aquarium famous for rescued dolphins, otters and sea turtles."},
+  {n:"Treasure Island Beach",r:"Treasure Island",la:27.7670,lo:-82.7715,c:0,m:150,in:false,v:"busy",b:true,d:"Wide Gulf beach with soft white sand and sunsets (free entry; paid parking)."},
+  {n:"Honeymoon Island State Park",r:"Dunedin",la:28.0641,lo:-82.8304,c:8,m:180,in:false,v:"quiet",b:true,d:"White-sand Gulf beach and nature trails (per-vehicle entry fee)."},
+  {n:"Downtown Dunedin",r:"Dunedin",la:28.0117,lo:-82.7891,c:0,m:75,in:false,v:"busy",b:false,d:"Walkable, artsy downtown — murals, boutiques, breweries and a weekend market."},
+  {n:"Penny Lane Beatles Museum",r:"Dunedin",la:28.0116,lo:-82.7901,c:0,m:45,in:true,v:"quiet",b:false,d:"Free hidden gem — the largest private Beatles memorabilia collection in the US."},
+  {n:"Tarpon Springs Sponge Docks",r:"Tarpon Springs",la:28.1551,lo:-82.7610,c:0,m:90,in:false,v:"busy",b:true,d:"Historic Greek sponge-diving waterfront — bakeries, boat tours and shops."},
+  {n:"Safety Harbor Waterfront Park",r:"Safety Harbor",la:27.9907,lo:-82.6855,c:0,m:50,in:false,v:"quiet",b:true,d:"Tranquil bayfront park with a mangrove boardwalk, pier and sunset views."},
+  {n:"Museum of Fine Arts, St. Pete",r:"St. Petersburg",la:27.7744,lo:-82.6319,c:20,m:90,in:true,v:"quiet",b:true,d:"Waterfront fine-art museum spanning antiquities to French Impressionism."},
+  {n:"The James Museum",r:"St. Petersburg",la:27.7711,lo:-82.6348,c:20,m:90,in:true,v:"quiet",b:false,d:"Sleek museum of Western & wildlife art with a dramatic stone-canyon entry."},
+  {n:"Dunedin Brewery",r:"Dunedin",la:28.0140,lo:-82.7875,c:12,m:75,in:true,v:"busy",b:false,d:"Florida's oldest microbrewery — craft beer, live music and a laid-back crowd."},
+  {n:"Busch Gardens Tampa Bay",r:"Tampa",la:28.0371,lo:-82.4195,c:110,m:300,in:false,v:"busy",b:false,k:"amusement",d:"World-class theme park — thrill coasters, live shows and a huge animal collection."},
+  {n:"Adventure Island",r:"Tampa",la:28.0417,lo:-82.413,c:80,m:240,in:false,v:"busy",b:false,k:"waterpark",d:"Tropical water park with slides, a lazy river and splash zones."},
+  {n:"Eureka Springs Park",r:"Tampa",la:28.0065,lo:-82.3439,c:2,m:60,in:false,v:"quiet",b:false,k:"nature",d:"Hidden botanical preserve with a greenhouse, boardwalk and forest loop ($2 parking)."},
+  {n:"Ballast Point Park",r:"Tampa",la:27.889,lo:-82.4812,c:0,m:60,in:false,v:"quiet",b:true,k:"pier",d:"Bayfront park at the end of Bayshore with a fishing pier, cafe and skyline views."},
+  {n:"Scarfone/Hartley Gallery",r:"Tampa",la:27.9467,lo:-82.4689,c:0,m:45,in:true,v:"quiet",b:false,k:"gallery",d:"Free University of Tampa gallery with rotating, often playful exhibitions."},
+  {n:"Florida Museum of Photographic Arts",r:"Tampa",la:27.9605,lo:-82.4407,c:12,m:60,in:true,v:"quiet",b:false,k:"photo",d:"Ybor-area museum devoted to photography, thoughtfully curated."},
+  {n:"USF Contemporary Art Museum",r:"Tampa",la:28.0636,lo:-82.4156,c:0,m:45,in:true,v:"quiet",b:false,k:"gallery",d:"Free university museum with a rotating program of contemporary work."},
+  {n:"Hyde Park Village",r:"Tampa",la:27.9375,lo:-82.4755,c:0,m:75,in:false,v:"busy",b:false,k:"shops",d:"Walkable upscale village of shops, cafes and a fountain courtyard."},
+  {n:"Tampa Bay Brewing Company",r:"Tampa",la:27.9614,lo:-82.4416,c:14,m:75,in:true,v:"busy",b:false,k:"brewery",d:"Ybor brewpub with creative beers and a full kitchen."},
+  {n:"Coppertail Brewing Co.",r:"Tampa",la:27.9563,lo:-82.4302,c:14,m:75,in:true,v:"busy",b:false,k:"brewery",d:"Big, lively Ybor brewery with a patio by the streetcar."},
+  {n:"Sky Puppy Brewing",r:"Tampa",la:27.9607,lo:-82.4448,c:14,m:75,in:true,v:"quiet",b:false,k:"brewery",d:"Tiny, moody bat-themed taproom with a soulful, low-key vibe."},
+  {n:"Woven Water Brewing Company",r:"Tampa",la:27.9668,lo:-82.4675,c:14,m:75,in:true,v:"quiet",b:false,k:"brewery",d:"Quiet, creative taproom known for hazy IPAs and inventive sours."},
+  {n:"Motorworks Brewing Taproom",r:"Tampa",la:27.9397,lo:-82.4518,c:14,m:75,in:true,v:"busy",b:true,k:"brewery",d:"Easygoing Harbour Island taproom with pizza and a waterside patio."},
+  {n:"Cream de la Cream",r:"Tampa",la:27.8902,lo:-82.5295,c:10,m:30,in:true,v:"quiet",b:false,k:"dessert",d:"Rolled ice cream, bubble waffles and bingsoo, open late."},
+  {n:"Sea Maids Creamery",r:"Tampa",la:27.9843,lo:-82.4597,c:10,m:30,in:true,v:"quiet",b:false,k:"dessert",d:"Whimsical family creamery with unique flavors and shakes."},
+  {n:"Bekdash Ice Cream & Desserts",r:"Tampa",la:28.0491,lo:-82.3929,c:10,m:30,in:true,v:"busy",b:false,k:"dessert",d:"Dazzling Middle-Eastern sweets, baklava and Arabic ice cream."},
+  {n:"Ice Screamin",r:"Tampa",la:28.0832,lo:-82.4119,c:10,m:30,in:true,v:"quiet",b:false,k:"dessert",d:"Beloved late-night ice cream shop with build-your-own combos."},
+  {n:"Imagine Museum",r:"St. Petersburg",la:27.7713,lo:-82.6594,c:18,m:90,in:true,v:"quiet",b:false,k:"art",d:"Dazzling museum of contemporary glass art in the Warehouse Arts District."},
+  {n:"Chihuly Collection",r:"St. Petersburg",la:27.771,lo:-82.644,c:18,m:90,in:true,v:"quiet",b:false,k:"art",d:"Glowing permanent collection of Dale Chihuly glass, with glassblowing nearby."},
+  {n:"Pass-a-Grille Beach",r:"St Pete Beach",la:27.6957,lo:-82.7367,c:0,m:150,in:false,v:"quiet",b:true,k:"beach",d:"Quaint, low-key Gulf beach at the south tip of St. Pete Beach."},
+];
+const MEALS = [
+  {n:"Nana Street Food",r:"Tampa",la:27.9508,lo:-82.4595,c:13,m:45,in:true,v:"quiet",b:false,d:"Fast-casual Lebanese — shawarma bowls, falafel and hummus.",meal:true},
+  {n:"Naked Farmer",r:"Tampa",la:27.9438,lo:-82.4498,c:15,m:45,in:true,v:"quiet",b:true,d:"Build-your-own healthy bowls with locally-sourced ingredients.",meal:true},
+  {n:"Heights Public Market (Armature Works)",r:"Tampa",la:27.9610,lo:-82.4640,c:16,m:60,in:true,v:"busy",b:true,d:"Buzzy riverfront food hall — dozens of stalls under one roof.",meal:true},
+  {n:"District Tavern",r:"Tampa",la:27.9480,lo:-82.4469,c:20,m:60,in:true,v:"busy",b:false,d:"Cozy neighborhood sports bar with hearty American plates.",meal:true},
+  {n:"Dip and Happy",r:"Tampa",la:27.9519,lo:-82.4610,c:18,m:50,in:true,v:"quiet",b:false,d:"Cheerful cafe for breakfast, brunch and specialty coffee.",meal:true},
+  {n:"The Pearl Tampa",r:"Tampa",la:27.9433,lo:-82.4501,c:35,m:75,in:true,v:"busy",b:true,d:"Upscale Water Street seafood & Southern tavern fare.",meal:true},
+  {n:"Social Roost",r:"St. Petersburg",la:27.7719,lo:-82.6348,c:22,m:60,in:true,v:"busy",b:false,d:"Creative small-plates kitchen & bar in downtown St. Pete.",meal:true},
+  {n:"The Library Restaurant",r:"St. Petersburg",la:27.7640,lo:-82.6397,c:24,m:65,in:true,v:"quiet",b:false,d:"Cozy, wood-paneled spot with a refined library aesthetic.",meal:true},
+  {n:"Crabby's Beachside Pavilion",r:"Clearwater",la:27.9852,lo:-82.8277,c:24,m:65,in:true,v:"busy",b:true,d:"Beachfront grill with live music and Gulf sunset views.",meal:true},
+  {n:"Hellas Restaurant & Bakery",r:"Tarpon Springs",la:28.1554,lo:-82.7619,c:20,m:60,in:true,v:"busy",b:true,d:"Bustling Greek restaurant & bakery right on the sponge docks.",meal:true},
+  {n:"The Greeks Taverna",r:"Tarpon Springs",la:28.1479,lo:-82.7565,c:16,m:55,in:true,v:"quiet",b:false,d:"Casual, generous Greek plates — gyros, moussaka and spanakopita.",meal:true},
+  {n:"Veskolini Cafe",r:"Dunedin",la:28.0130,lo:-82.7863,c:14,m:45,in:true,v:"quiet",b:false,d:"Elegant Dunedin cafe for coffee, breakfast and fresh baklava.",meal:true},
+  {n:"Prohibition Dunedin",r:"Dunedin",la:28.0198,lo:-82.7605,c:22,m:60,in:true,v:"busy",b:false,d:"Lively gastropub with generous plates and a buzzy bar.",meal:true},
+  {n:"The Living Room on Main",r:"Dunedin",la:28.0121,lo:-82.7860,c:24,m:65,in:true,v:"busy",b:false,d:"Stylish tapas-and-brunch spot with a cool, eclectic interior.",meal:true},
+  {n:"Origen Dunedin",r:"Dunedin",la:28.0139,lo:-82.7895,c:30,m:70,in:true,v:"quiet",b:false,d:"Elevated upscale dining — oysters, steaks and a calm rooftop bar.",meal:true},
+  {n:"Crema Cafe",r:"Dunedin",la:28.0397,lo:-82.7842,c:13,m:45,in:true,v:"quiet",b:false,d:"Cozy coffee shop and boutique near Honeymoon Island.",meal:true},
+  {n:"Parkshore Grill",r:"St. Petersburg",la:27.7752,lo:-82.6325,c:28,m:65,in:true,v:"busy",b:true,d:"Beach Drive al-fresco dining overlooking the waterfront park.",meal:true},
+  {n:"BellaBrava",r:"St. Petersburg",la:27.7738,lo:-82.6329,c:24,m:60,in:true,v:"busy",b:true,d:"Beach Drive Italian — wood-fired pizza and pasta with patio seating.",meal:true},
+  {n:"Frenchy's Rockaway Grill",r:"Clearwater",la:27.9835,lo:-82.8278,c:24,m:65,in:true,v:"busy",b:true,d:"Beachfront seafood institution famous for grouper and sunset views.",meal:true},
+  {n:"Restoration Cafe",r:"Clearwater",la:27.9667,lo:-82.8001,c:10,m:45,in:true,v:"quiet",b:false,d:"Warm, eclectic downtown coffeehouse with from-scratch bakes.",meal:true},
+  {n:"Wildflower Cafe",r:"Clearwater",la:27.9439,lo:-82.7997,c:16,m:50,in:true,v:"quiet",b:false,d:"Made-from-scratch brunch in a cozy, easygoing setting.",meal:true},
+  {n:"Copenhagen Cafe",r:"Tarpon Springs",la:28.1466,lo:-82.7568,c:14,m:45,in:true,v:"quiet",b:false,d:"Relaxed Danish-style cafe — coffee, pastries and brunch.",meal:true},
+  {n:"Tarpon Social Club",r:"Tarpon Springs",la:28.1508,lo:-82.7572,c:13,m:45,in:true,v:"quiet",b:false,d:"Charming family-run coffee bar with Greek touches and fresh bakes.",meal:true},
+  {n:"The Brinehouse",r:"Safety Harbor",la:27.9906,lo:-82.6890,c:20,m:60,in:true,v:"busy",b:false,d:"Brined-meats kitchen and sports bar with hearty sandwiches.",meal:true},
+  {n:"Water Oak",r:"Safety Harbor",la:27.9909,lo:-82.6893,c:28,m:65,in:true,v:"quiet",b:false,d:"Upscale-casual seafood & steak in a refined, rustic room.",meal:true},
+  {n:"Whistle Stop Grill and Bar",r:"Safety Harbor",la:27.9910,lo:-82.6968,c:18,m:60,in:true,v:"busy",b:false,d:"Laid-back local pub with live music most nights.",meal:true},
+  {n:"Palihouse Lobby Bar",r:"Tampa",la:27.9375,lo:-82.4753,c:20,m:60,in:true,v:"quiet",b:false,k:"restaurant",meal:true,d:"Stylish, hushed boutique-hotel lobby bar for cocktails and small plates."},
+  {n:"The Landon",r:"Tampa",la:27.936,lo:-82.4833,c:40,m:60,in:true,v:"quiet",b:false,k:"restaurant",meal:true,d:"Polished South Howard newcomer with artful, upscale plates."},
+  {n:"Timpano Hyde Park",r:"Tampa",la:27.9371,lo:-82.476,c:35,m:65,in:true,v:"busy",b:false,k:"italian",meal:true,d:"Festive Hyde Park Italian steakhouse with a buzzy bar."},
+  {n:"Babushka's",r:"Tampa",la:27.9419,lo:-82.4689,c:22,m:60,in:true,v:"busy",b:false,k:"easteuro",meal:true,d:"Cozy Eastern-European spot for dumplings, plov and house-infused vodka."},
+  {n:"Willa's",r:"Tampa",la:27.9475,lo:-82.4771,c:18,m:60,in:true,v:"quiet",b:false,k:"restaurant",meal:true,d:"Airy North Hyde Park brunch spot with a hand-painted mural."},
+  {n:"Front Porch & Bart's Tavern",r:"Tampa",la:28.0013,lo:-82.4598,c:20,m:60,in:true,v:"busy",b:false,k:"restaurant",meal:true,d:"Seminole Heights porch dining with hearty plates and live music."},
+  {n:"Mangos Southern Kitchen",r:"Tampa",la:27.9941,lo:-82.4592,c:24,m:60,in:true,v:"busy",b:false,k:"restaurant",meal:true,d:"Soulful Southern kitchen — oxtail, lamb chops and a rooftop DJ."},
+  {n:"Con Amor",r:"Tampa",la:27.9948,lo:-82.4597,c:18,m:55,in:true,v:"busy",b:false,k:"mexican",meal:true,d:"Authentic Mexican with house tortillas, salsa trios and craft margaritas."},
+  {n:"Bamboozle Heights",r:"Tampa",la:28.0131,lo:-82.4593,c:18,m:55,in:true,v:"quiet",b:false,k:"asian",meal:true,d:"Fresh Vietnamese-fusion bowls, pho and banh mi with vegan options."},
+  {n:"Rooster & the Till",r:"Tampa",la:28.0068,lo:-82.4597,c:45,m:60,in:true,v:"quiet",b:false,k:"restaurant",meal:true,d:"Michelin-listed Seminole Heights small plates, inventive and refined."},
+  {n:"Wicked Oak BarbeQue",r:"Tampa",la:28.0079,lo:-82.4593,c:18,m:55,in:true,v:"busy",b:false,k:"bbq",meal:true,d:"Passion-project BBQ joint — brisket, burnt ends and banana pudding."},
+  {n:"Ichiban Sushi & Ramen",r:"Tampa",la:27.9936,lo:-82.4593,c:20,m:60,in:true,v:"quiet",b:false,k:"sushi",meal:true,d:"Beloved little Seminole Heights spot for fresh sushi and ramen."},
+  {n:"Izakaya Tori",r:"Tampa",la:27.9418,lo:-82.5053,c:24,m:60,in:true,v:"busy",b:false,k:"sushi",meal:true,d:"Award-winning West Tampa izakaya with creative rolls and ramen."},
+  {n:"Smile Thai & Sushi",r:"Tampa",la:27.9121,lo:-82.5058,c:18,m:55,in:true,v:"quiet",b:false,k:"asian",meal:true,d:"South Tampa newcomer pairing Thai curries with sushi."},
+  {n:"Kiwami Ramen Sushi",r:"Tampa",la:27.9237,lo:-82.3408,c:20,m:60,in:true,v:"busy",b:false,k:"sushi",meal:true,d:"Tucked-away ramen-and-sushi spot with happy-hour sake flights."},
+  {n:"Forbici Modern Italian",r:"Tampa",la:27.9358,lo:-82.4767,c:28,m:65,in:true,v:"busy",b:false,k:"italian",meal:true,d:"Chic, moody Hyde Park Italian with wood-fired pizza and pasta."},
+  {n:"CoffeeMe",r:"Tampa",la:28.0337,lo:-82.4756,c:10,m:45,in:true,v:"quiet",b:false,k:"cafe",meal:true,d:"Cheerful Busch Blvd coffee bar famous for its cinnamon-bun latte."},
+  {n:"Noble Brew",r:"Tampa",la:27.9675,lo:-82.4596,c:10,m:45,in:true,v:"quiet",b:false,k:"cafe",meal:true,d:"Unpretentious neighborhood coffee shop done right."},
+  {n:"Socotra Yemeni Coffee",r:"Tampa",la:28.0549,lo:-82.3774,c:12,m:45,in:true,v:"quiet",b:false,k:"cafe",meal:true,d:"Beautiful Yemeni coffeehouse with rich brews and traditional sweets."},
+  {n:"Urban Therapy",r:"Tampa",la:27.9445,lo:-82.4697,c:10,m:45,in:true,v:"quiet",b:false,k:"cafe",meal:true,d:"Roomy, late-open coffee shop great for studying or a smoothie."},
+  {n:"Kanji Sushi & Ramen",r:"Brandon",la:27.9248,lo:-82.3175,c:22,m:60,in:true,v:"busy",b:false,k:"sushi",meal:true,d:"Sleek Brandon sushi house with a semi-upscale vibe."},
+  {n:"The Breeze Waterfront Cafe",r:"Gulfport",la:27.738,lo:-82.7105,c:18,m:45,in:true,v:"quiet",b:true,k:"cafe",meal:true,d:"Charming Gulfport breakfast cafe steps from the water."},
+  {n:"Stormrunners Tavern",r:"Gulfport",la:27.738,lo:-82.7076,c:18,m:60,in:true,v:"busy",b:true,k:"restaurant",meal:true,d:"Two-story Gulfport waterfront tavern with great views and burgers."},
+  {n:"O'Maddy's Bar & Grille",r:"Gulfport",la:27.738,lo:-82.7067,c:20,m:60,in:true,v:"busy",b:true,k:"restaurant",meal:true,d:"Lively Gulfport waterfront Irish grill with sunset seafood."},
+  {n:"Buoys Waterfront Bar and Grill",r:"St Pete Beach",la:27.7411,lo:-82.7542,c:24,m:65,in:true,v:"busy",b:true,k:"seafood",meal:true,d:"Breezy St. Pete Beach spot for lobster rolls and waterfront brunch."},
+];
+
+/* representative seasonal weather for the demo (live build = forecast API) */
+let WX={t:'84°F',cond:'Partly sunny',note:'Typical Tampa afternoon — warm & humid, brief PM shower possible.'};
+
+async function loadWeather(){
+  try{
+    const p=await fetch('https://api.weather.gov/points/27.9477,-82.4584',
+      {headers:{'User-Agent':'SunshineItinerary/1.0','Accept':'application/geo+json'}});
+    if(!p.ok) throw new Error();
+    const pd=await p.json();
+    const f=await fetch(pd.properties.forecast,
+      {headers:{'User-Agent':'SunshineItinerary/1.0','Accept':'application/geo+json'}});
+    if(!f.ok) throw new Error();
+    const fd=await f.json();
+    const per=fd.properties.periods[0];
+    WX={
+      t: per.temperature+'°'+per.temperatureUnit,
+      cond: per.shortForecast,
+      note: per.detailedForecast.length>140
+        ? per.detailedForecast.slice(0,137)+'...'
+        : per.detailedForecast
+    };
+  }catch(e){}
+}
+loadWeather();;
+
+/* ---- UI wiring ---- */
+function pickGroup(id){
+  document.querySelectorAll('#'+id+' .chip').forEach(c=>c.onclick=()=>{
+    document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+  });
+}
+pickGroup('setting'); pickGroup('vibe');
+
+/* region chips are multi-select: "Anywhere" is exclusive with the specific cities */
+(function regionWire(){
+  const chips=[...document.querySelectorAll('#region .chip')];
+  const anyChip=document.querySelector('#region .chip[data-r="any"]');
+  chips.forEach(c=>c.onclick=()=>{
+    if(c.dataset.r==='any'){ chips.forEach(x=>x.classList.toggle('on', x===c)); return; }
+    anyChip.classList.remove('on');
+    c.classList.toggle('on');
+    if(!chips.some(x=>x.dataset.r!=='any'&&x.classList.contains('on'))) anyChip.classList.add('on');
+  });
+})();
+function selRegions(){
+  const on=[...document.querySelectorAll('#region .chip.on')].map(c=>c.dataset.r);
+  return on.includes('any')?[]:on;   // [] means anywhere
+}
+document.getElementById('mealTog').onclick=function(){this.classList.toggle('on')};
+function makeTimes(selId,defMin){
+  const sel=document.getElementById(selId);
+  for(let m=360;m<=1380;m+=30){
+    const h=Math.floor(m/60),mn=m%60,ap=h<12?'AM':'PM',h12=h%12||12;
+    const opt=document.createElement('option');
+    opt.value=m; opt.textContent=h12+':'+(mn?'30':'00')+' '+ap;
+    if(m===defMin)opt.selected=true;
+    sel.appendChild(opt);
+  }
+  return sel;
+}
+const startSel=makeTimes('startTime',540);
+const endSel  =makeTimes('endTime',  900);
+startSel.onchange=()=>{ if(+endSel.value<=+startSel.value) endSel.value=String(+startSel.value+60); };
+endSel.onchange  =()=>{ if(+endSel.value<=+startSel.value) endSel.value=String(+startSel.value+60); };
+const ppl=document.getElementById('people'), pplVal=document.getElementById('pplVal');
+ppl.oninput=()=>pplVal.textContent=ppl.value+(ppl.value==='1'?' person':' people');
+
+function sel(id){return document.querySelector('#'+id+' .chip.on').dataset.v}
+
+/* distance → driving minutes (haversine, ~28mph urban avg) */
+function travelMin(a,b){
+  const R=3959,toR=x=>x*Math.PI/180;
+  const dLa=toR(b.la-a.la),dLo=toR(b.lo-a.lo);
+  const h=Math.sin(dLa/2)**2+Math.cos(toR(a.la))*Math.cos(toR(b.la))*Math.sin(dLo/2)**2;
+  const mi=R*2*Math.asin(Math.sqrt(h));
+  return Math.max(4, Math.round(mi/28*60)+3); // +3 min parking buffer
+}
+function fmt(min){const h=Math.floor(min/60),m=min%60;return (h?h+"h ":"")+(m?m+"m":"" )||"0m"}
+function clock(min){let h=Math.floor(min/60)%24,m=min%60;const ap=h<12?"AM":"PM";h=h%12||12;return h+":"+String(m).padStart(2,'0')+" "+ap}
+
+let STATE=null;
+const shuffle=a=>a.map(x=>[Math.random(),x]).sort((u,v)=>u[0]-v[0]).map(x=>x[1]);
+const gcost=(p,party)=>p.c*party;
+
+function readForm(){
+  return {
+    party:+ppl.value,
+    budget:Math.max(0,+document.getElementById('budget').value||0),
+    startMin:+document.getElementById('startTime').value,
+    endMin:  +document.getElementById('endTime').value,
+    get minutes(){ return Math.max(60, this.endMin-this.startMin); },
+    setting:sel('setting'), vibe:sel('vibe'), regions:selRegions(),
+    mealsOn:document.getElementById('mealTog').classList.contains('on')
+  };
+}
+function matchPlace(p,f){
+  if(f.setting==='indoor'&&!p.in)return false;
+  if(f.setting==='outdoor'&&p.in)return false;
+  if(f.vibe!=='either'&&p.v!==f.vibe)return false;
+  if(f.regions.length&&!f.regions.includes(p.r))return false;
+  return true;
+}
+function matchMeal(p,f){
+  if(f.setting==='outdoor')return false;            // meals served indoors here
+  if(f.vibe!=='either'&&p.v!==f.vibe)return false;
+  if(f.regions.length&&!f.regions.includes(p.r))return false;
+  return true;
+}
+
+/* timeline from route [{p,mins}] + optional meal {p,mins}.
+   each entry carries its OWN duration so the user can edit time per stop. */
+function computeTimeline(route, meal, party, startMin){ startMin=startMin||540;
+  let items=[], t=startMin, prev=null, total=0;
+  const lunchTarget=12*60+30; let mealPlaced=false;
+  const push=(entry,meta)=>{
+    const p=entry.p;
+    if(prev){const tr=travelMin(prev,p); items.push({type:'travel',min:tr,to:p}); t+=tr;}
+    items.push(Object.assign({type:'stop',p,mins:entry.mins,start:t,gc:gcost(p,party)},meta));
+    total+=gcost(p,party); t+=entry.mins; prev=p;
+  };
+  route.forEach((entry,i)=>{
+    if(meal&&!mealPlaced&&t>=lunchTarget){push(meal,{isMeal:true}); mealPlaced=true;}
+    push(entry,{routeIdx:i});
+  });
+  if(meal&&!mealPlaced) push(meal,{isMeal:true});
+  return {items, total, totalMin:t-startMin};
+}
+
+/* patch a computed timeline with real drive times from Distance Matrix API */
+function applyRealTimes(tl,realTimes,startMin){
+  if(!realTimes||!realTimes.length)return;
+  let leg=0,t=startMin||540;
+  tl.items.forEach(it=>{
+    if(it.type==='travel'){
+      if(realTimes[leg]!==undefined) it.min=Math.max(1,Math.round(realTimes[leg]/60));
+      t+=it.min; leg++;
+    }else{ it.start=t; t+=it.mins; }
+  });
+  tl.totalMin=t-(startMin||540);
+}
+
+async function build(){
+  const R=document.getElementById('results');
+  R.innerHTML='<div class="empty"><div class="loading-spinner"></div><div style="margin-top:14px;color:var(--muted)">Building your day…</div></div>';
+  const f=readForm();
+  const pool=shuffle(PLACES.filter(p=>matchPlace(p,f))).sort((a,b)=>a.c-b.c);
+  const mealPool=shuffle(MEALS.filter(p=>matchMeal(p,f))).sort((a,b)=>a.c-b.c);
+  const reserveMeal=f.mealsOn&&mealPool.length?mealPool[0]:null;
+  const mealCost=reserveMeal?gcost(reserveMeal,f.party):0;
+  const mealMin =reserveMeal?reserveMeal.m+10:0;
+
+  let spend=0, used=0, route=[];
+  for(const p of pool){
+    const last=route.length?route[route.length-1].p:null;
+    const tr=last?travelMin(last,p):0;
+    if(spend+gcost(p,f.party)+mealCost<=f.budget && used+tr+p.m+mealMin<=f.minutes){
+      route.push({p, mins:p.m}); spend+=gcost(p,f.party); used+=tr+p.m;
+    }
+    if(route.length>=4)break;
+  }
+  STATE={f, route, meal:reserveMeal?{p:reserveMeal,mins:reserveMeal.m}:null};
+
+  // build a first-pass timeline to get stop order, then fetch real drive times
+  const tl0=computeTimeline(STATE.route,STATE.meal,f.party,f.startMin);
+  const orderedStops=tl0.items.filter(it=>it.type==='stop').map(it=>({la:it.p.la,lo:it.p.lo,n:it.p.n}));
+
+  try{
+    if(orderedStops.length>1 && MAPS_API_KEY!=='AIzaSyBObksWDkGwLaM8Y3q9MXbMP0KDZFQUIBU'){
+      // Race the Maps JS ready-promise against a 6-second timeout.
+      // If Maps JS fails to load (wrong key, billing issue, referrer mismatch),
+      // the timeout wins and we fall through to haversine estimates gracefully.
+      const mapsTimeout=new Promise(r=>setTimeout(r,6000));
+      await Promise.race([mapsReadyPromise, mapsTimeout]);
+
+      // Only attempt the API call if google.maps actually loaded
+      if(typeof google!=='undefined' && google.maps && google.maps.DistanceMatrixService){
+        const times=await new Promise((resolve)=>{
+          new google.maps.DistanceMatrixService().getDistanceMatrix({
+            origins: orderedStops.slice(0,-1).map(s=>new google.maps.LatLng(s.la,s.lo)),
+            destinations: orderedStops.slice(1).map(s=>new google.maps.LatLng(s.la,s.lo)),
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL
+          },(response,status)=>{
+            if(status==='OK'){
+              resolve(response.rows.map((row,i)=>{
+                const el=row.elements[i];
+                return (el&&el.status==='OK') ? el.duration.value : null;
+              }));
+            } else {
+              resolve(null); // bad status — fall back silently
+            }
+          });
+        });
+        if(times) STATE.realTimes=times;
+      }
+    }
+  }catch(e){ /* any unexpected error — fall back to haversine silently */ }
+  finally{
+    renderState(); // ALWAYS render, no matter what happened above
+  }
+}
+
+/* swaps stay within the current time cap (planned window, or however long the user has
+   already stretched it) so an auto-suggestion never silently blows up the day */
+function timeCap(){
+  const f=STATE.f, cur=computeTimeline(STATE.route,STATE.meal,f.party).totalMin;
+  return Math.max(f.minutes, cur);
+}
+function swapActivity(idx, btn){
+  const f=STATE.f, cap=timeCap();
+  const used=new Set(STATE.route.map(e=>e.p.n)); if(STATE.meal)used.add(STATE.meal.p.n);
+  for(const c of shuffle(PLACES.filter(p=>matchPlace(p,f)&&!used.has(p.n)))){
+    const r=STATE.route.slice(); r[idx]={p:c, mins:c.m};
+    const tl=computeTimeline(r,STATE.meal,f.party);
+    if(tl.total<=f.budget && tl.totalMin<=cap){ STATE.route=r; STATE.realTimes=null; renderState(); return; }
+  }
+  noAlt(btn);
+}
+function swapMeal(btn){
+  const f=STATE.f, cap=timeCap();
+  for(const c of shuffle(MEALS.filter(p=>matchMeal(p,f)&&p.n!==STATE.meal.p.n))){
+    const tl=computeTimeline(STATE.route,{p:c,mins:c.m},f.party);
+    if(tl.total<=f.budget && tl.totalMin<=cap){ STATE.meal={p:c,mins:c.m}; STATE.realTimes=null; renderState(); return; }
+  }
+  noAlt(btn);
+}
+/* user-driven time editing, in 30-minute steps (min 30m per stop) */
+function addTime(idx, delta, isMeal){
+  if(isMeal){ if(STATE.meal) STATE.meal.mins=Math.max(30, STATE.meal.mins+delta); }
+  else { STATE.route[idx].mins=Math.max(30, STATE.route[idx].mins+delta); }
+  renderState();
+}
+function noAlt(btn){
+  if(!btn)return; const o=btn.innerHTML;
+  btn.innerHTML='Nothing else fits'; btn.disabled=true;
+  setTimeout(()=>{btn.innerHTML=o; btn.disabled=false;},1500);
+}
+
+/* ---- themed map pins ---- */
+const ICON={beach:'⛱️',park:'🌳',museum:'🏛️',art:'🎨',science:'🔬',kids:'🧸',aquarium:'🐠',
+  library:'📚',books:'📖',garden:'🦩',pier:'🎣',historic:'🚋',wharf:'🍢',shops:'🛍️',
+  music:'🎸',docks:'🧽',restaurant:'🍔',cafe:'☕',brewery:'🍺',
+  amusement:'🎢',waterpark:'🌊',gallery:'🖼️',photo:'📷',nature:'🌿',
+  bbq:'🍖',sushi:'🍣',italian:'🍝',mexican:'🌮',asian:'🍜',dessert:'🍦',easteuro:'🥟',seafood:'🦐'};
+const KIND={
+  "Curtis Hixon Waterfront Park":"park","Julian B. Lane Riverfront Park":"park","Tampa Riverwalk":"park",
+  "Water Works Park":"park","Cotanchobee Fort Brooke Park":"park","The Florida Aquarium":"aquarium",
+  "Tampa Bay History Center":"museum","Tampa Museum of Art":"art","Henry B. Plant Museum":"museum",
+  "Glazer Children's Museum":"kids","Museum of Science & Innovation (MOSI)":"science",
+  "Davis Islands Beach":"beach","John F. Germany Public Library":"library","Oxford Exchange":"books",
+  "Sparkman Wharf":"wharf","Ybor City Historic District":"historic","The Dalí Museum":"art",
+  "St. Pete Pier":"pier","Sunken Gardens":"garden","Clearwater Marine Aquarium":"aquarium",
+  "Treasure Island Beach":"beach","Honeymoon Island State Park":"beach","Downtown Dunedin":"shops",
+  "Penny Lane Beatles Museum":"music","Tarpon Springs Sponge Docks":"docks","Safety Harbor Waterfront Park":"park",
+  "Dip and Happy":"cafe","Veskolini Cafe":"cafe",
+  "Museum of Fine Arts, St. Pete":"art","The James Museum":"art","Dunedin Brewery":"brewery",
+  "Crema Cafe":"cafe","Restoration Cafe":"cafe","Copenhagen Cafe":"cafe","Tarpon Social Club":"cafe","Wildflower Cafe":"cafe"
+};
+function iconFor(p){ return ICON[p.k || KIND[p.n] || (p.meal?'restaurant':'park')] || '📍'; }
+
+/* hand-drawn nautical chart of the day's route. coords are real; projection
+   uses uniform scaling (with a latitude correction) so NE/SW relationships hold. */
+/* Simplified Tampa Bay landmasses, traced as [lon,lat] rings from the real coastline.
+   Not survey-accurate, but the peninsulas, bay and Gulf shore are recognizable and
+   geographically consistent with the pin coordinates. */
+const LAND=[
+  // Pinellas peninsula (Gulf side W, Old Tampa Bay side E) — Tarpon Springs down to Pinellas Point
+  [[-82.78,28.20],[-82.76,28.16],[-82.74,28.10],[-82.74,28.04],[-82.79,28.02],[-82.83,27.98],[-82.83,27.92],
+   [-82.84,27.85],[-82.82,27.78],[-82.79,27.72],[-82.75,27.69],[-82.71,27.69],[-82.70,27.73],[-82.68,27.76],
+   [-82.65,27.76],[-82.63,27.74],[-82.62,27.71],[-82.63,27.67],[-82.68,27.63],[-82.66,27.60],[-82.61,27.61],
+   [-82.61,27.66],[-82.60,27.72],[-82.61,27.78],[-82.62,27.84],[-82.64,27.90],[-82.66,27.96],[-82.68,28.02],
+   [-82.70,28.07],[-82.71,28.13],[-82.73,28.18],[-82.76,28.21]],
+  // Tampa / mainland (E of the bay) — big block to the right, with the interbay/Hillsborough indentations
+  [[-82.57,28.20],[-82.30,28.20],[-82.30,27.60],[-82.45,27.58],[-82.49,27.62],[-82.48,27.68],[-82.45,27.72],
+   [-82.46,27.78],[-82.44,27.83],[-82.46,27.88],[-82.45,27.93],[-82.43,27.95],[-82.46,27.99],[-82.50,28.00],
+   [-82.52,28.05],[-82.51,28.11],[-82.54,28.16],[-82.57,28.20]],
+  // Interbay peninsula tip (Davis Islands / MacDill area) nub
+  [[-82.46,27.92],[-82.44,27.90],[-82.45,27.86],[-82.48,27.86],[-82.49,27.89],[-82.47,27.92]],
+  // Gulf barrier islands (Clearwater Bch / Treasure Is / St Pete Bch) — thin strip W of Pinellas
+  [[-82.85,28.00],[-82.83,27.94],[-82.84,27.86],[-82.83,27.78],[-82.81,27.71],[-82.79,27.71],[-82.81,27.79],
+   [-82.82,27.87],[-82.81,27.95],[-82.83,28.01]]
+];
+
+function mapSVG(stops){
+  const W=640,H=440;
+  // FIXED geographic window over the whole region so geography is stable & recognizable
+  const LO0=-82.88, LO1=-82.28, LA0=27.55, LA1=28.22;   // W,E,S,N bounds
+  const cos=Math.cos(27.9*Math.PI/180);
+  const gW=(LO1-LO0)*cos, gH=(LA1-LA0);
+  const s=Math.min(W/gW, H/gH);
+  const offX=(W-gW*s)/2, offY=(H-gH*s)/2;
+  const X=lo=> offX+(lo-LO0)*cos*s;
+  const Y=la=> offY+(LA1-la)*s;
+  const ring=r=> r.map(([lo,la])=>`${X(lo).toFixed(1)},${Y(la).toFixed(1)}`).join(' ');
+  const land=LAND.map(r=>`<polygon points="${ring(r)}" class="land"/>`).join('');
+
+  // faint lat/long graticule
+  let grid='';
+  for(let lo=-82.8; lo<=-82.3; lo+=0.1) grid+=`<line x1="${X(lo).toFixed(1)}" y1="0" x2="${X(lo).toFixed(1)}" y2="${H}" class="mgrid"/>`;
+  for(let la=27.6; la<=28.2; la+=0.1) grid+=`<line x1="0" y1="${Y(la).toFixed(1)}" x2="${W}" y2="${Y(la).toFixed(1)}" class="mgrid"/>`;
+
+  const pts=stops.map(s=>`${X(s.p.lo).toFixed(1)},${Y(s.p.la).toFixed(1)}`).join(' ');
+  const route = stops.length>1 ? `<polyline points="${pts}" class="routeline"/>` : '';
+
+  // region labels for orientation
+  const REG=[["Gulf of Mexico",-82.83,27.66,'sea'],["Tampa Bay",-82.55,27.74,'sea'],
+    ["Old Tampa Bay",-82.60,27.97,'sea'],["TAMPA",-82.40,27.97,'land'],
+    ["ST. PETE",-82.66,27.77,'land'],["CLEARWATER",-82.80,27.97,'land'],["TARPON SPGS",-82.74,28.16,'land']];
+  const labels=REG.map(([t,lo,la,k])=>`<text x="${X(lo).toFixed(1)}" y="${Y(la).toFixed(1)}" class="rlabel ${k}">${t}</text>`).join('');
+
+  let pins='';
+  stops.forEach((st,i)=>{
+    const x=X(st.p.lo).toFixed(1), y=Y(st.p.la).toFixed(1);
+    const label=st.p.n.replace(/\s*\(.*\)/,'').slice(0,16);
+    const lw=Math.min(label.length*6.2+14,140);
+    pins+=`<g class="mappin" style="animation-delay:${(i*0.12).toFixed(2)}s" transform="translate(${x},${y})">
+      <title>${st.num}. ${st.p.n} — ${st.p.r}</title>
+      <ellipse cx="0" cy="20" rx="11" ry="4" class="pinshadow"/>
+      <path d="M0 19 C -13 2 -13 -17 0 -17 C 13 -17 13 2 0 19 Z" class="pinbody"/>
+      <circle cx="0" cy="-7" r="11.5" class="pindisc"/>
+      <text x="0" y="-6.5" class="picon">${iconFor(st.p)}</text>
+      <circle cx="9.5" cy="-16" r="7.5" class="pinnum"/>
+      <text x="9.5" y="-15.5" class="pinnumtext">${st.num}</text>
+      <g class="pinlabel"><rect x="${(-lw/2).toFixed(1)}" y="23" width="${lw.toFixed(1)}" height="15" rx="7"/>
+        <text x="0" y="33.5">${label}</text></g>
+    </g>`;
+  });
+
+  const compass=`<g transform="translate(${W-44},44)" class="compass">
+    <circle r="20" class="crose"/>
+    <line x1="0" y1="-15" x2="0" y2="15" class="cax"/><line x1="-15" y1="0" x2="15" y2="0" class="cax"/>
+    <path d="M0 -15 L5 1 L0 -3 L-5 1 Z" class="cneedle"/>
+    <text x="0" y="-23" class="cn">N</text></g>`;
+
+  return `<svg viewBox="0 0 ${W} ${H}" class="baymap" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+    <defs><radialGradient id="water" cx="45%" cy="40%" r="85%">
+      <stop offset="0%" stop-color="#bfe3df"/><stop offset="100%" stop-color="#8ec7c2"/></radialGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#water)"/>
+    ${grid}${land}${labels}${route}${pins}${compass}
+    <text x="16" y="${H-14}" class="mapcap">Tampa Bay — your route between stops</text>
+  </svg>`;
+}
+
+function renderState(){
+  const {f, route, meal}=STATE;
+  const R=document.getElementById('results');
+  if(!route.length){
+    R.innerHTML=`<div class="empty"><div class="big">No match within those limits</div>
+      Try raising the budget, extending the time, lowering the headcount, widening the area,
+      or loosening the "near the water" / atmosphere filters.</div>`;
+    return;
+  }
+  const tl=computeTimeline(route,meal,f.party,f.startMin);
+  if(STATE.realTimes) applyRealTimes(tl,STATE.realTimes,f.startMin);
+  const mealIn=tl.items.some(i=>i.isMeal);
+  const over=tl.totalMin>f.minutes;
+  let stops=[],sn=0; tl.items.forEach(it=>{ if(it.type==='stop') stops.push({p:it.p,num:++sn}); });
+  let html=`<div class="summary">
+    <div class="blk"><b>$${tl.total}</b><small>of $${f.budget} &middot; ${f.party} ${f.party===1?'person':'people'}</small></div>
+    <div class="blk"><b>${route.length}</b><small>stops${mealIn?' + meal':''}</small></div>
+    <div class="blk"><b style="${over?'color:var(--gold)':''}">${clock(f.startMin)}</b><small>start</small></div>
+    <div class="blk"><b style="${over?'color:var(--coral)':''}">${clock(f.startMin+tl.totalMin)}</b><small>${over?'past '+clock(f.endMin):'end'}</small></div>
+    <div class="blk" style="display:none"><b>${fmt(tl.totalMin)}</b></div>
+    <div class="wx"><div class="t">${WX.t} ${WX.cond}</div><div style="font-size:.78rem;color:var(--gold)">${WX.note}</div></div>
+  </div>`;
+  if(over) html+=`<div class="overnote">The day now runs until <b>${clock(f.startMin+tl.totalMin)}</b>, past your ${clock(f.endMin)} end time. Trim a stop with &minus;30m or pick a later end time.</div>`;
+  html+=`<button class="retry" onclick="build()">&#8635; Build a whole new day</button>`;
+  html+=`<div class="mapwrap">${mapSVG(stops)}</div>`;
+  html+=`<div class="timeline">`;
+
+  let cardNum=0;
+  tl.items.forEach((it,idx)=>{
+    if(it.type==='travel'){
+      html+=`<div class="travel">${it.min} min travel${it.to?` to ${it.to.n.split('(')[0].trim()}`:''}</div>`;
+    }else{
+      const p=it.p, free=it.gc===0;
+      const tagCost=it.isMeal?`<span class="tag t-meal">Meal</span>`
+        :free?`<span class="tag t-free">Free</span>`:`<span class="tag t-paid">$${it.gc} total</span>`;
+      const tagVibe=`<span class="tag t-vibe">${p.in?'Indoor':'Outdoor'} &middot; ${p.v==='busy'?'Lively':'Quiet'}</span>`;
+      const tagRegion=`<span class="tag t-region">${p.r}</span>`;
+      const map=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.n+' '+p.r+' FL')}`;
+      const tgt=it.isMeal?`0,30,true`:`${it.routeIdx},30,false`;
+      const tgtMinus=it.isMeal?`0,-30,true`:`${it.routeIdx},-30,false`;
+      const swapBtn=it.isMeal
+        ? `<button class="swap" onclick="swapMeal(this)">Let's try something else &#8635;</button>`
+        : `<button class="swap" onclick="swapActivity(${it.routeIdx},this)">Let's try something else &#8635;</button>`;
+      let priceNote='';
+      if(it.isMeal && !free)
+        priceNote=`<div class="pricenote">&#8776; $${p.c}/person estimate — drinks &amp; extras can push it higher, but rarely by much.</div>`;
+      else if(!free)
+        priceNote=`<div class="pricenote">Estimated admission &times; ${f.party} ${f.party===1?'person':'people'}. Final price may vary by ticket type.</div>`;
+      const timeEdit=`<div class="timeedit">
+        <button class="step" onclick="addTime(${tgtMinus})" ${it.mins<=30?'disabled':''}>&minus;30m</button>
+        <span class="dur">&#9201; ${fmt(it.mins)} here</span>
+        <button class="step" onclick="addTime(${tgt})">+30m</button>
+        <span class="durhint">need more time? tap +30m</span>
+      </div>`;
+      html+=`<div class="stop" style="animation-delay:${idx*0.05}s">
+        <div class="card"><div class="top">
+          <div class="cardbody"><div class="cardhead"><span class="cardnum">${++cardNum}</span><span class="time">${clock(it.start)}</span></div><h3>${p.n}</h3>
+            ${tagCost}${tagVibe}${tagRegion}
+            <div class="desc">${p.d}</div>
+            ${priceNote}
+            ${timeEdit}
+            <div class="cardactions">
+              <a class="maplink" href="${map}" target="_blank" rel="noopener">View on map &#8599;</a>
+              ${swapBtn}
+            </div>
+          </div>
+          <div class="cost">${free?'Free':'$'+it.gc}</div>
+        </div></div></div>`;
+    }
+  });
+  html+=`</div>
+  <div class="disclaimer"><b>About this demo:</b> places are real Tampa Bay-area spots pulled from Google Places,
+  spanning Tampa, St. Petersburg, Clearwater, Dunedin, Tarpon Springs, Safety Harbor and Treasure Island. Suggested
+  durations and prices are realistic estimates (paid spots &times; group size) — a production version would pull live
+  admission prices, hours, real-time driving times, and the day's actual weather forecast from APIs.</div>`;
+  R.innerHTML=html;
+  R.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+</script>
+</body>
+</html>
