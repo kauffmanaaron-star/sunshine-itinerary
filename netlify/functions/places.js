@@ -59,6 +59,71 @@ async function nearbySearch(lat, lng, radius, includedTypes, key) {
   return data.places || [];
 }
 
+
+// Auto-generate a short description from available metadata when Google
+// doesn't provide an editorial summary (which is most places).
+function generateDesc(name, types, vibe, nearWater, indoor, region, cost, nRatings){
+  const busy   = vibe==='busy';
+  const pop    = nRatings>1000 ? 'wildly popular ' : nRatings>200 ? 'well-loved ' : '';
+  const wf     = nearWater ? 'Waterfront ' : '';
+  const tone   = busy ? 'Lively' : 'Relaxed';
+
+  // ── Meals ──────────────────────────────────────────────────────────────────
+  if(types.includes('coffee_shop')||types.includes('juice_bar'))
+    return pop+'Coffee, light bites and good vibes in '+region+'.';
+  if(types.includes('ice_cream_shop')||types.includes('dessert_shop'))
+    return pop+'Ice cream, sweets and desserts in '+region+'.';
+  if(types.includes('bakery'))
+    return pop+'Fresh-baked goods and café fare in '+region+'.';
+  if(types.includes('breakfast_restaurant')||types.includes('brunch_restaurant'))
+    return pop+'Breakfast and brunch favourite in '+region+'.';
+  if(types.includes('barbecue_restaurant'))
+    return pop+'Smoked meats and BBQ plates in '+region+'.';
+  if(types.includes('seafood_restaurant'))
+    return pop+wf+'Seafood restaurant in '+region+'.';
+  if(types.includes('italian_restaurant')||types.includes('pizza_restaurant'))
+    return pop+'Italian kitchen in '+region+'.';
+  if(types.includes('mexican_restaurant'))
+    return pop+'Mexican cuisine and margaritas in '+region+'.';
+  if(types.includes('japanese_restaurant'))
+    return pop+'Sushi, ramen and Japanese dishes in '+region+'.';
+  if(types.includes('steak_house'))
+    return pop+'Steakhouse with a full bar in '+region+'.';
+  if(types.includes('fast_food_restaurant')||types.includes('sandwich_shop'))
+    return pop+'Quick, casual eats in '+region+'.';
+  if(types.includes('bar')||types.includes('night_club'))
+    return pop+tone+' bar and drinks spot in '+region+'.';
+  if(types.some(function(t){return t.includes('restaurant');}))
+    return pop+(busy?'Bustling':'Casual')+' dining in '+region+(nearWater?' with waterfront views':'')+'.';
+
+  // ── Attractions ────────────────────────────────────────────────────────────
+  if(types.includes('aquarium'))
+    return pop+'Marine life exhibits and hands-on sea-life experiences in '+region+'.';
+  if(types.includes('zoo'))
+    return pop+'Animals, wildlife and conservation education in '+region+'.';
+  if(types.includes('amusement_park'))
+    return 'Rides, shows and full-day entertainment in '+region+'.';
+  if(types.includes('museum'))
+    return pop+(busy?'Popular':'Quiet')+' museum worth a visit in '+region+'.';
+  if(types.includes('art_gallery'))
+    return pop+'Art gallery with rotating exhibitions in '+region+'.';
+  if(types.includes('spa'))
+    return pop+'Spa and wellness retreat in '+region+'.';
+  if(types.includes('movie_theater'))
+    return 'Cinema — catch a film in '+region+'.';
+  if(types.includes('bowling_alley'))
+    return 'Bowling lanes and entertainment in '+region+'.';
+  if(types.includes('national_park')||types.includes('state_park'))
+    return pop+'State or national park with trails and natural scenery near '+region+'.';
+  if(types.includes('park')||types.includes('natural_feature'))
+    return pop+wf+'Park — a great spot for a walk or some fresh air near '+region+'.';
+  if(types.includes('tourist_attraction'))
+    return pop+(busy?'Popular':'Well-regarded')+' local attraction in '+region+'.';
+
+  // Generic fallback
+  return pop+(indoor?'Indoor':'Outdoor')+' '+(busy?'lively':'quiet')+' spot in '+region+'.';
+}
+
 // Classify a Places API (New) result into our app schema
 function classify(place, region) {
   const types    = place.types || [];
@@ -165,6 +230,7 @@ function classify(place, region) {
     v:  vibe,
     b:  nearWater,
     k,
+    d: generateDesc(name, types, vibe, nearWater, indoor, region, cost, nRatings),
     ...(isMeal ? { meal: true } : {})
   };
 }
