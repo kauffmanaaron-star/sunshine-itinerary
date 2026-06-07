@@ -597,10 +597,31 @@ function applyRealTimes(tl,realTimes,startMin){
 
 async function build(){
   const R=document.getElementById('results');
-  R.innerHTML='<div class="empty"><div class="loading-spinner"></div><div style="margin-top:14px;color:var(--muted)">Building your day…</div></div>';
+  R.innerHTML='<div class="empty"><div class="loading-spinner"></div><div style="margin-top:14px;color:var(--muted)">Finding great spots near you…</div></div>';
   const f=readForm();
-  const pool=shuffle(PLACES.filter(p=>matchPlace(p,f))).sort((a,b)=>a.c-b.c);
-  const mealPool=shuffle(MEALS.filter(p=>matchMeal(p,f))).sort((a,b)=>a.c-b.c);
+
+  // ── Fetch live POIs from Google Places, merge with curated list ──────────
+  let livePOIs=[], liveMeals=[];
+  try{
+    const pr=await fetch('/.netlify/functions/places',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({regions:f.regions, setting:f.setting, mealsOn:f.mealsOn})
+    });
+    if(pr.ok){
+      const pd=await pr.json();
+      if(pd.pois && pd.pois.length){
+        const existing=new Set([...PLACES,...MEALS].map(p=>p.n));
+        pd.pois.forEach(p=>{ if(!existing.has(p.n)){ p.meal ? liveMeals.push(p) : livePOIs.push(p); } });
+      }
+    }
+  }catch(e){ /* use curated only if fetch fails */ }
+
+  // Live + curated combined pools for this build
+  const ALL_PLACES=[...PLACES,...livePOIs];
+  const ALL_MEALS=[...MEALS,...liveMeals];
+
+  const pool=shuffle(ALL_PLACES.filter(p=>matchPlace(p,f))).sort((a,b)=>a.c-b.c);
+  const mealPool=shuffle(ALL_MEALS.filter(p=>matchMeal(p,f))).sort((a,b)=>a.c-b.c);
   const reserveMeal=f.mealsOn&&mealPool.length?mealPool[0]:null;
   const mealCost=reserveMeal?gcost(reserveMeal,f.party):0;
   const mealMin =reserveMeal?reserveMeal.m+10:0;
@@ -614,7 +635,8 @@ async function build(){
     }
     if(route.length>=4)break;
   }
-  STATE={f, route, meal:reserveMeal?{p:reserveMeal,mins:reserveMeal.m}:null};
+  STATE={f, route, meal:reserveMeal?{p:reserveMeal,mins:reserveMeal.m}:null,
+         livePOIs, liveMeals};
 
   // build a first-pass timeline to get stop order, then fetch real drive times
   const tl0=computeTimeline(STATE.route,STATE.meal,f.party,f.startMin);
@@ -664,8 +686,9 @@ function timeCap(){
 }
 function swapActivity(idx, btn){
   const f=STATE.f, cap=timeCap();
+  const allPlaces=[...PLACES,...(STATE.livePOIs||[])];
   const used=new Set(STATE.route.map(e=>e.p.n)); if(STATE.meal)used.add(STATE.meal.p.n);
-  for(const c of shuffle(PLACES.filter(p=>matchPlace(p,f)&&!used.has(p.n)))){
+  for(const c of shuffle(allPlaces.filter(p=>matchPlace(p,f)&&!used.has(p.n)))){
     const r=STATE.route.slice(); r[idx]={p:c, mins:c.m};
     const tl=computeTimeline(r,STATE.meal,f.party);
     if(tl.total<=f.budget && tl.totalMin<=cap){ STATE.route=r; STATE.realTimes=null; renderState(); return; }
@@ -674,7 +697,8 @@ function swapActivity(idx, btn){
 }
 function swapMeal(btn){
   const f=STATE.f, cap=timeCap();
-  for(const c of shuffle(MEALS.filter(p=>matchMeal(p,f)&&p.n!==STATE.meal.p.n))){
+  const allMeals=[...MEALS,...(STATE.liveMeals||[])];
+  for(const c of shuffle(allMeals.filter(p=>matchMeal(p,f)&&p.n!==STATE.meal.p.n))){
     const tl=computeTimeline(STATE.route,{p:c,mins:c.m},f.party);
     if(tl.total<=f.budget && tl.totalMin<=cap){ STATE.meal={p:c,mins:c.m}; STATE.realTimes=null; renderState(); return; }
   }
