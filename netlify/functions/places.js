@@ -1,6 +1,5 @@
-// Full live discovery — queries Google Places Nearby Search based on the
-// user's filters (regions, setting, mealsOn) and returns classified POIs
-// ready to merge with the curated dataset in the client.
+// Full live discovery using the Google Places API (New).
+// Uses the Nearby Search endpoint from the new Places API.
 
 const REGION_CENTERS = {
   'Tampa':          { lat: 27.9477, lng: -82.4584, radius: 7000 },
@@ -15,106 +14,151 @@ const REGION_CENTERS = {
   'Brandon':        { lat: 27.9378, lng: -82.2859, radius: 5000 }
 };
 
-// Tampa Bay wide center for "Anywhere" queries
 const BAY_CENTER = { lat: 27.90, lng: -82.63, radius: 35000 };
 
-// ── Google Places Nearby Search ──────────────────────────────────────────────
-async function nearbySearch(lat, lng, radius, type, key) {
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
-    `?location=${lat},${lng}&radius=${radius}&type=${type}` +
-    `&rankby=prominence&key=${key}`;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    console.error('Places API status:', data.status, type);
+// Places API (New) — Nearby Search
+async function nearbySearch(lat, lng, radius, includedTypes, key) {
+  const url = 'https://places.googleapis.com/v1/places:searchNearby';
+  const body = {
+    locationRestriction: {
+      circle: {
+        center: { latitude: lat, longitude: lng },
+        radius
+      }
+    },
+    includedTypes,
+    maxResultCount: 20,
+    rankPreference: 'POPULARITY'
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': [
+        'places.id',
+        'places.displayName',
+        'places.types',
+        'places.location',
+        'places.rating',
+        'places.userRatingCount',
+        'places.priceLevel',
+        'places.currentOpeningHours'
+      ].join(',')
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Places API error:', res.status, err.slice(0, 200));
     return [];
   }
-  return data.results || [];
+  const data = await res.json();
+  return data.places || [];
 }
 
-// ── Classify a raw Places result into our app's schema ───────────────────────
+// Classify a Places API (New) result into our app schema
 function classify(place, region) {
-  const types  = place.types || [];
-  const name   = place.name  || '';
-  const price  = place.price_level;
-  const nRatings = place.user_ratings_total || 0;
-  const loc    = place.geometry && place.geometry.location;
+  const types    = place.types || [];
+  const name     = (place.displayName && place.displayName.text) || '';
+  const loc      = place.location;
   if (!loc) return null;
 
+  const price    = place.priceLevel;    // e.g. "PRICE_LEVEL_MODERATE"
+  const nRatings = place.userRatingCount || 0;
+
   // Meal vs attraction
-  const MEAL_TYPES = ['restaurant','cafe','bar','bakery','food',
-                      'meal_delivery','meal_takeaway','night_club'];
+  const MEAL_TYPES = ['restaurant','cafe','bar','bakery','food_establishment',
+                      'meal_delivery','meal_takeaway','night_club','american_restaurant',
+                      'italian_restaurant','mexican_restaurant','japanese_restaurant',
+                      'chinese_restaurant','seafood_restaurant','steak_house',
+                      'fast_food_restaurant','pizza_restaurant','sandwich_shop',
+                      'coffee_shop','juice_bar','ice_cream_shop','dessert_shop',
+                      'breakfast_restaurant','brunch_restaurant','barbecue_restaurant'];
   const isMeal = MEAL_TYPES.some(t => types.includes(t));
 
   // Kind → icon
   let k = 'park';
-  if      (types.includes('aquarium'))              k = 'aquarium';
-  else if (types.includes('zoo'))                   k = 'amusement';
-  else if (types.includes('amusement_park'))        k = 'amusement';
-  else if (types.includes('museum'))                k = 'museum';
-  else if (types.includes('art_gallery'))           k = 'art';
-  else if (types.includes('bowling_alley'))         k = 'amusement';
-  else if (types.includes('movie_theater'))         k = 'amusement';
-  else if (types.includes('spa'))                   k = 'nature';
-  else if (/beach/i.test(name) || types.includes('beach')) k = 'beach';
-  else if (types.includes('park') || types.includes('natural_feature')) k = 'park';
-  else if (types.includes('tourist_attraction'))    k = 'museum';
+  if      (types.includes('aquarium'))                    k = 'aquarium';
+  else if (types.includes('zoo'))                         k = 'amusement';
+  else if (types.includes('amusement_park'))              k = 'amusement';
+  else if (types.includes('museum'))                      k = 'museum';
+  else if (types.includes('art_gallery'))                 k = 'art';
+  else if (types.includes('movie_theater'))               k = 'amusement';
+  else if (types.includes('bowling_alley'))               k = 'amusement';
+  else if (types.includes('spa'))                         k = 'nature';
+  else if (/beach/i.test(name) || types.includes('beach'))k = 'beach';
+  else if (types.includes('park') || types.includes('national_park') || types.includes('state_park')) k = 'park';
+  else if (types.includes('tourist_attraction'))          k = 'museum';
   else if (isMeal) {
-    if (/sushi|ramen|japanese/i.test(name))         k = 'sushi';
-    else if (/pizza|italian|trattoria|osteria/i.test(name)) k = 'italian';
-    else if (/mexican|taco|cantina/i.test(name))    k = 'mexican';
-    else if (/bbq|barbecue|smokehouse/i.test(name)) k = 'bbq';
-    else if (/seafood|fish|crab|lobster|oyster/i.test(name)) k = 'seafood';
-    else if (/cafe|coffee|brew|roast|espresso|bakery/i.test(name)) k = 'cafe';
-    else if (types.includes('bar') || types.includes('night_club')) k = 'brewery';
-    else k = 'restaurant';
+    if (types.includes('japanese_restaurant') || /sushi|ramen/i.test(name))  k = 'sushi';
+    else if (types.includes('italian_restaurant') || types.includes('pizza_restaurant')) k = 'italian';
+    else if (types.includes('mexican_restaurant'))        k = 'mexican';
+    else if (types.includes('barbecue_restaurant'))       k = 'bbq';
+    else if (types.includes('seafood_restaurant'))        k = 'seafood';
+    else if (types.includes('coffee_shop') || types.includes('cafe') ||
+             types.includes('juice_bar') || types.includes('bakery'))        k = 'cafe';
+    else if (types.includes('ice_cream_shop') || types.includes('dessert_shop')) k = 'dessert';
+    else if (types.includes('bar') || types.includes('night_club'))          k = 'brewery';
+    else                                                  k = 'restaurant';
   }
 
   // Indoor
-  const INDOOR_TYPES = ['museum','art_gallery','aquarium','restaurant','cafe','bar',
-    'night_club','movie_theater','bowling_alley','shopping_mall','gym','spa','bakery','food'];
+  const INDOOR_TYPES = ['restaurant','cafe','bar','museum','art_gallery','aquarium',
+    'night_club','movie_theater','bowling_alley','shopping_mall','spa','bakery',
+    'coffee_shop','food_establishment','american_restaurant','italian_restaurant',
+    'mexican_restaurant','japanese_restaurant','seafood_restaurant','fast_food_restaurant',
+    'pizza_restaurant','sandwich_shop','juice_bar','ice_cream_shop','dessert_shop',
+    'breakfast_restaurant','brunch_restaurant','barbecue_restaurant','steak_house'];
   const indoor = INDOOR_TYPES.some(t => types.includes(t)) || isMeal;
 
   // Vibe
-  let vibe = 'busy'; // default
-  const QUIET_TYPES = ['museum','art_gallery','spa','natural_feature','library'];
-  if (QUIET_TYPES.some(t => types.includes(t)))         vibe = 'quiet';
+  const QUIET_TYPES = ['museum','art_gallery','spa','library','botanical_garden'];
+  let vibe = 'busy';
+  if (QUIET_TYPES.some(t => types.includes(t)))           vibe = 'quiet';
   if (isMeal) vibe = nRatings > 400 ? 'busy' : 'quiet';
-  if (/garden|botanical|arboretum|nature|preserve/i.test(name)) vibe = 'quiet';
-  if (/market|wharf|hall|pier|festival/i.test(name))    vibe = 'busy';
+  if (/garden|botanical|nature|preserve|arboretum/i.test(name)) vibe = 'quiet';
+  if (/market|wharf|hall|pier|festival/i.test(name))      vibe = 'busy';
 
   // Near water
   const WATER_RE = /beach|bay|waterfront|harbor|harbour|pier|marina|gulf|coast|island|isle/i;
-  const nearWater = WATER_RE.test(name) ||
-    types.some(t => /beach|marina/.test(t));
+  const nearWater = WATER_RE.test(name) || types.some(t => /beach|marina/.test(t));
 
-  // Cost estimate
+  // Cost — new API uses string price levels
+  const PRICE_MAP = {
+    'PRICE_LEVEL_FREE': 0,
+    'PRICE_LEVEL_INEXPENSIVE': 12,
+    'PRICE_LEVEL_MODERATE': 22,
+    'PRICE_LEVEL_EXPENSIVE': 40,
+    'PRICE_LEVEL_VERY_EXPENSIVE': 70
+  };
   let cost = 0;
   if (isMeal) {
-    cost = ({1: 12, 2: 20, 3: 35, 4: 60})[price] || 18;
+    cost = PRICE_MAP[price] || 18;
   } else {
-    if (types.includes('amusement_park'))            cost = 100;
+    if (types.includes('amusement_park'))                 cost = 100;
     else if (types.includes('aquarium') || types.includes('zoo')) cost = 32;
-    else if (types.includes('museum'))               cost = 18;
-    else if (types.includes('art_gallery'))          cost = 0;
-    else if (types.includes('spa'))                  cost = 60;
-    else                                             cost = 0;
+    else if (types.includes('museum'))                    cost = 18;
+    else if (types.includes('art_gallery'))               cost = 0;
+    else if (types.includes('spa'))                       cost = 60;
+    else                                                  cost = 0;
   }
 
-  // Duration estimate (minutes)
+  // Duration (minutes)
   let mins = 60;
-  if (types.includes('amusement_park'))              mins = 300;
+  if (types.includes('amusement_park'))                   mins = 300;
   else if (types.includes('aquarium') || types.includes('zoo')) mins = 150;
   else if (types.includes('museum') || types.includes('art_gallery')) mins = 90;
-  else if (types.includes('park') || types.includes('natural_feature')) mins = 60;
-  else if (isMeal)                                   mins = 60;
+  else if (types.includes('park') || types.includes('national_park')) mins = 60;
+  else if (isMeal)                                        mins = 60;
 
   return {
     n:  name,
     r:  region,
-    la: loc.lat,
-    lo: loc.lng,
+    la: loc.latitude,
+    lo: loc.longitude,
     c:  cost,
     m:  mins,
     in: indoor,
@@ -125,7 +169,7 @@ function classify(place, region) {
   };
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
+// Main handler
 exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -135,7 +179,10 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
 
   const key = process.env.GOOGLE_API_KEY_PLACES;
-  if (!key) return { statusCode: 500, headers, body: JSON.stringify({ error: 'No key' }) };
+  if (!key) return {
+    statusCode: 500, headers,
+    body: JSON.stringify({ error: 'Missing GOOGLE_API_KEY_PLACES' })
+  };
 
   let regions = [], setting = 'either', mealsOn = true;
   try {
@@ -145,44 +192,63 @@ exports.handler = async (event) => {
     mealsOn  = body.mealsOn !== false;
   } catch(e) {}
 
-  // Determine query targets
+  // Query targets
   const targets = regions.length > 0
-    ? regions.filter(r => REGION_CENTERS[r]).map(r => ({ name: r, ...REGION_CENTERS[r] }))
-    : [{ name: 'Tampa Bay', ...BAY_CENTER }]; // "Anywhere" = one wide query
+    ? regions.filter(r => REGION_CENTERS[r])
+        .map(r => ({ name: r, ...REGION_CENTERS[r] }))
+    : [{ name: 'Tampa Bay', ...BAY_CENTER }];
 
-  // Cap at 4 regions to keep latency reasonable (all results deduped client-side with curated list)
   const queryTargets = targets.slice(0, 4);
 
-  // Build type list based on filters
+  // Build type lists based on filters
   const attractionTypes = [];
-  if (setting !== 'outdoor') attractionTypes.push('museum','art_gallery','aquarium','amusement_park','spa');
-  if (setting !== 'indoor')  attractionTypes.push('tourist_attraction','park','natural_feature');
-  const mealTypes = [];
-  if (mealsOn) {
-    mealTypes.push('restaurant');
-    if (setting !== 'outdoor') mealTypes.push('cafe');
+  if (setting !== 'outdoor') {
+    attractionTypes.push(
+      ['museum','art_gallery'],
+      ['aquarium'],
+      ['amusement_park']
+    );
+  }
+  if (setting !== 'indoor') {
+    attractionTypes.push(
+      ['tourist_attraction'],
+      ['park','national_park','state_park']
+    );
   }
 
-  // Fire all queries concurrently per target (faster than sequential)
+  const mealTypeSets = [];
+  if (mealsOn) {
+    mealTypeSets.push(
+      ['restaurant','american_restaurant','seafood_restaurant','steak_house','barbecue_restaurant'],
+      ['italian_restaurant','mexican_restaurant','japanese_restaurant','pizza_restaurant'],
+      ['breakfast_restaurant','brunch_restaurant','fast_food_restaurant','sandwich_shop']
+    );
+    if (setting !== 'outdoor') {
+      mealTypeSets.push(['cafe','coffee_shop','bakery','dessert_shop','ice_cream_shop']);
+    }
+  }
+
+  // Fire all queries concurrently
   const raw = [];
   await Promise.all(queryTargets.map(async (t) => {
-    const allTypes = [...attractionTypes, ...mealTypes];
-    await Promise.all(allTypes.map(async (type) => {
-      const results = await nearbySearch(t.lat, t.lng, t.radius, type, key);
+    const allSets = [...attractionTypes, ...mealTypeSets];
+    await Promise.all(allSets.map(async (typeSet) => {
+      const results = await nearbySearch(t.lat, t.lng, t.radius, typeSet, key);
       results.forEach(r => raw.push({ place: r, region: t.name }));
     }));
   }));
 
-  // Classify, dedupe by place_id and name, filter nulls
+  // Deduplicate and classify
   const seenIds   = new Set();
   const seenNames = new Set();
   const pois = [];
 
   for (const { place, region } of raw) {
-    if (seenIds.has(place.place_id))   continue;
-    if (seenNames.has(place.name))     continue;
-    seenIds.add(place.place_id);
-    seenNames.add(place.name);
+    if (!place.id || seenIds.has(place.id))     continue;
+    const name = place.displayName && place.displayName.text;
+    if (!name || seenNames.has(name))           continue;
+    seenIds.add(place.id);
+    seenNames.add(name);
     const poi = classify(place, region);
     if (poi) pois.push(poi);
   }
