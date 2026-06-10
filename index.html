@@ -515,11 +515,9 @@ async function build(){
   // Live + curated combined pools for this build
   const ALL_PLACES=[...PLACES,...livePOIs];
   const ALL_MEALS=[...MEALS,...liveMeals];
-  console.log(`[Build] livePOIs:${livePOIs.length} liveMeals:${liveMeals.length} total:${ALL_PLACES.length+ALL_MEALS.length}`);
 
   const pool=shuffle(ALL_PLACES.filter(p=>matchPlace(p,f))).sort((a,b)=>a.c-b.c);
   const mealPool=shuffle(ALL_MEALS.filter(p=>matchMeal(p,f))).sort((a,b)=>a.c-b.c);
-  console.log(`[Build] pool after matchPlace:${pool.length} mealPool after matchMeal:${mealPool.length}`);
   const reserveMeal=f.mealsOn&&mealPool.length?mealPool[0]:null;
   const mealCost=reserveMeal?gcost(reserveMeal,f.party):0;
   const mealMin =reserveMeal?reserveMeal.m+10:0;
@@ -559,10 +557,7 @@ async function build(){
     const g=catGroup(p);
     const cap=(CAT_GROUPS[g]||{max:2}).max;
     const alreadyInGroup=(catCount[g]||0);
-    if(alreadyInGroup>=cap){
-      console.log(`[Cap] skipping ${p.n} (group=${g} count=${alreadyInGroup} cap=${cap})`);
-      continue;
-    }
+    if(alreadyInGroup>=cap) continue;
     if(spend+gcost(p,f.party)+mealCost<=f.budget && used+tr+p.m+mealMin<=f.minutes){
       route.push({p, mins:p.m}); spend+=gcost(p,f.party); used+=tr+p.m;
       catCount[g]=(catCount[g]||0)+1;
