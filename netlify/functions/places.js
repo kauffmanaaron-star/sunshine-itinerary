@@ -57,12 +57,6 @@ async function nearbySearch(lat, lng, radius, includedTypes, key, rankByDistance
   const body = {
     locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius } },
     includedTypes,
-    excludedTypes: [
-      'lodging','hotel','motel','extended_stay_hotel','hostel',
-      'gas_station','car_repair','car_wash','car_dealer',
-      'dentist','doctor','hospital','pharmacy','insurance_agency',
-      'real_estate_agency','lawyer','bank','atm','finance'
-    ],
     maxResultCount: 20,
     rankPreference: rankByDistance ? 'DISTANCE' : 'POPULARITY'
   };
@@ -87,7 +81,7 @@ async function nearbySearch(lat, lng, radius, includedTypes, key, rankByDistance
     }
     const data = await res.json();
     if (data.error) {
-      console.error(`Places API error [${includedTypes}]:`, JSON.stringify(data.error).slice(0,200));
+      console.error(`Places API error [${includedTypes}] status=${data.error.code}: ${data.error.message}`);
       return [];
     }
     return data.places || [];
@@ -316,4 +310,3 @@ exports.handler = async (event) => {
   console.log(`Returning ${pois.length} classified POIs`);
   return { statusCode: 200, headers, body: JSON.stringify({ pois, count: pois.length }) };
 };
- 
