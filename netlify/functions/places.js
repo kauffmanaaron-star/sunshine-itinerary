@@ -146,18 +146,32 @@ function classify(place, region) {
   const isMeal = MEAL_TYPES.some(t => types.includes(t));
 
   // Kind → icon
+  // For ambiguous types (art_gallery, tourist_attraction) we cross-check the
+  // name so a store with art_gallery in its Google types doesn't get mislabelled.
+  const nameL = name.toLowerCase();
+  const isRealGallery  = types.includes('art_gallery') &&
+    /gallery|museum|art|studio|exhibit|collection|fine art/i.test(name);
+  const isRealAttraction = types.includes('tourist_attraction') &&
+    !/store|shop|boutique|salon|spa|hotel|inn|suites|lodge|resort|realtor|insurance|dental|clinic|pharmacy|auto|tire|repair/i.test(name);
+  const isStore = types.includes('store') || types.includes('clothing_store') ||
+    types.includes('shoe_store') || types.includes('jewelry_store') ||
+    types.includes('furniture_store') || types.includes('home_goods_store') ||
+    types.includes('electronics_store') || types.includes('book_store') ||
+    /\b(store|shop|boutique|outlet|mall|retail)\b/i.test(name);
+
   let k = 'park';
   if      (types.includes('aquarium'))                    k = 'aquarium';
   else if (types.includes('zoo'))                         k = 'amusement';
   else if (types.includes('amusement_park'))              k = 'amusement';
   else if (types.includes('museum'))                      k = 'museum';
-  else if (types.includes('art_gallery'))                 k = 'art';
+  else if (isRealGallery)                                 k = 'art';
   else if (types.includes('movie_theater'))               k = 'amusement';
   else if (types.includes('bowling_alley'))               k = 'amusement';
-  else if (types.includes('spa'))                         k = 'nature';
+  else if (types.includes('spa') && !isStore)             k = 'nature';
   else if (/beach/i.test(name) || types.includes('beach'))k = 'beach';
   else if (types.includes('park') || types.includes('national_park') || types.includes('state_park')) k = 'park';
-  else if (types.includes('tourist_attraction'))          k = 'museum';
+  else if (isStore)                                       k = 'shops';
+  else if (isRealAttraction)                              k = 'museum';
   else if (isMeal) {
     if (types.includes('japanese_restaurant') || /sushi|ramen/i.test(name))  k = 'sushi';
     else if (types.includes('italian_restaurant') || types.includes('pizza_restaurant')) k = 'italian';
