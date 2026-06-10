@@ -626,12 +626,35 @@ async function build(){
   const mealCost=reserveMeal?gcost(reserveMeal,f.party):0;
   const mealMin =reserveMeal?reserveMeal.m+10:0;
 
+  // Category groups and max picks per group — keeps itineraries varied
+  const CAT_GROUPS={
+    outdoor:  {kinds:['park','nature','beach','pier'],        max:2},
+    cultural: {kinds:['museum','art','gallery','photo','science','aquarium','kids'],max:1},
+    drinking: {kinds:['brewery'],                             max:1},
+    shopping: {kinds:['shops'],                               max:1},
+    fun:      {kinds:['amusement','waterpark'],               max:1},
+    wellness: {kinds:['nature'],                              max:1}  // spa/garden overlap
+  };
+  function catGroup(p){
+    const k=p.k||'park';
+    for(const [g,cfg] of Object.entries(CAT_GROUPS)){
+      if(cfg.kinds.includes(k)) return g;
+    }
+    return 'other';
+  }
+
   let spend=0, used=0, route=[];
+  const catCount={};
   for(const p of pool){
     const last=route.length?route[route.length-1].p:null;
     const tr=last?travelMin(last,p):0;
+    const g=catGroup(p);
+    const cap=(CAT_GROUPS[g]||{max:2}).max;
+    const alreadyInGroup=(catCount[g]||0);
+    if(alreadyInGroup>=cap) continue;            // skip — enough of this type already
     if(spend+gcost(p,f.party)+mealCost<=f.budget && used+tr+p.m+mealMin<=f.minutes){
       route.push({p, mins:p.m}); spend+=gcost(p,f.party); used+=tr+p.m;
+      catCount[g]=(catCount[g]||0)+1;
     }
     if(route.length>=4)break;
   }
