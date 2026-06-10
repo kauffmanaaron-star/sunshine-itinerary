@@ -44,7 +44,8 @@ async function nearbySearch(lat, lng, radius, includedTypes, key) {
         'places.rating',
         'places.userRatingCount',
         'places.priceLevel',
-        'places.currentOpeningHours'
+        'places.currentOpeningHours',
+        'places.editorialSummary'
       ].join(',')
     },
     body: JSON.stringify(body)
@@ -230,7 +231,10 @@ function classify(place, region) {
     v:  vibe,
     b:  nearWater,
     k,
-    d: generateDesc(name, types, vibe, nearWater, indoor, region, cost, nRatings),
+    // Use Google's editorial summary if available, otherwise auto-generate
+    d: (place.editorialSummary && place.editorialSummary.text)
+       ? place.editorialSummary.text
+       : generateDesc(name, types, vibe, nearWater, indoor, region, cost, nRatings),
     ...(isMeal ? { meal: true } : {})
   };
 }
